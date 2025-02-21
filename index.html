@@ -75,7 +75,8 @@
             font-size: 32px;
             font-weight: 700;
             text-align: center;
-            width: 100%;
+            width: 80%;
+            max-width: 700px;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
@@ -84,8 +85,7 @@
             line-height: 1.5;
             background: rgba(0, 0, 0, 0.7);
             padding: 20px;
-            border-top: 2px solid #00FFCC;
-            border-bottom: 2px solid #00FFCC;
+            border: 2px solid #00FFCC;
             border-radius: 10px;
 
             h1 {
@@ -228,7 +228,7 @@
             velY: 0,
             maxSpeed: 3,
             acceleration: 0.1,
-            bodyLength: 20,
+            bodyLength: 16,
             bodyWidth: 16,
             noseLength: 12,
             finSize: 8,
@@ -425,7 +425,7 @@
                 this.x = x;
                 this.y = y;
                 this.speed = (Math.random() * 2 + 1) * 0.9;
-                this.size = player.bodyLength * 1.32;
+                this.size = player.bodyLength * 1.8;
                 this.angle = angle;
                 this.hitRadius = this.size * 1.2;
                 this.rotationAngle = 0;
@@ -609,7 +609,7 @@
                 this.x = x;
                 this.y = y;
                 this.speed = (Math.random() * 2 + 1) * 0.9;
-                this.size = player.bodyLength * 1.2;
+                this.size = player.bodyLength * 1.7;
                 this.angle = angle;
                 this.hitRadius = this.size * 1.2;
                 this.rotationAngle = 0;
