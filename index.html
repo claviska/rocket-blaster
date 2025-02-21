@@ -9,7 +9,7 @@
         canvas {
             background: black;
             width: 100vw;
-            height: 100vh;
+            height: 100dvh;
             margin: 0;
         }
         body {
@@ -228,8 +228,8 @@
             velY: 0,
             maxSpeed: 3,
             acceleration: 0.1,
-            bodyLength: 16,
-            bodyWidth: 16,
+            bodyLength: 14,
+            bodyWidth: 14,
             noseLength: 12,
             finSize: 8,
             pulseScale: 1,
@@ -272,9 +272,11 @@
             '#FFEEAD',
             '#A100A1'
         ];
+        const ASTEROID_MIN_SIZE = 20;
+        const ASTEROID_MAX_SIZE = 40;        
         const BULLET_COLOR = '#FFBF00';
-        const STAR_SPAWN_MIN = 30000; // 30 seconds
-        const STAR_SPAWN_MAX = 45000; // 45 seconds
+        const STAR_SPAWN_MIN = 25000; // 25 seconds
+        const STAR_SPAWN_MAX = 50000; // 50 seconds
 
         const stars = [];
         const STAR_COUNT = 50;
@@ -425,7 +427,7 @@
                 this.x = x;
                 this.y = y;
                 this.speed = (Math.random() * 2 + 1) * 0.9;
-                this.size = player.bodyLength * 1.8;
+                this.size = ASTEROID_MIN_SIZE + Math.random() * (ASTEROID_MAX_SIZE - ASTEROID_MIN_SIZE);
                 this.angle = angle;
                 this.hitRadius = this.size * 1.2;
                 this.rotationAngle = 0;
@@ -609,7 +611,7 @@
                 this.x = x;
                 this.y = y;
                 this.speed = (Math.random() * 2 + 1) * 0.9;
-                this.size = player.bodyLength * 1.7;
+                this.size = 30;
                 this.angle = angle;
                 this.hitRadius = this.size * 1.2;
                 this.rotationAngle = 0;
@@ -735,11 +737,17 @@
                 player.pieces.forEach(p => p.draw());
                 return;
             }
+            
             ctx.save();
             ctx.translate(player.x, player.y);
             ctx.rotate(player.angle + Math.PI / 2);
-            ctx.scale(player.pulseScale * player.shootScale, player.pulseScale * player.shootScale);
+            
+            // Apply scaling while maintaining proper dimensions
+            const scale = (window.devicePixelRatio || 1) * 0.625;  // Increased by 25%
+            ctx.scale(player.pulseScale * player.shootScale * scale, 
+                     player.pulseScale * player.shootScale * scale);
 
+            // Main body
             ctx.fillStyle = ROCKET_COLOR;
             ctx.beginPath();
             ctx.moveTo(-player.bodyWidth/2, player.bodyLength);
@@ -748,39 +756,36 @@
             ctx.quadraticCurveTo(player.bodyWidth/4, 0, player.bodyWidth/2, player.bodyLength);
             ctx.fill();
 
+            // Nose cone
             ctx.fillStyle = ROCKET_ACCENT;
             ctx.beginPath();
             ctx.arc(0, -player.bodyLength, player.bodyWidth / 2, Math.PI, 0);
             ctx.fill();
 
+            // Left fin
             ctx.fillStyle = ROCKET_COLOR;
             ctx.beginPath();
-            ctx.moveTo(-player.bodyWidth/2, player.bodyLength);
-            ctx.lineTo(-player.bodyWidth/2 - player.finSize, player.bodyLength + player.finSize);
-            ctx.lineTo(-player.bodyWidth/2, player.bodyLength - player.finSize/2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.moveTo(player.bodyWidth/2, player.bodyLength);
-            ctx.lineTo(player.bodyWidth/2 + player.finSize, player.bodyLength + player.finSize);
-            ctx.lineTo(player.bodyWidth/2, player.bodyLength - player.finSize/2);
+            ctx.moveTo(-player.bodyWidth/2 + 2, player.bodyLength);
+            ctx.lineTo(-player.bodyWidth/2 - player.finSize * 1.2 + 2, player.bodyLength + player.finSize);
+            ctx.lineTo(-player.bodyWidth/2 + 2, player.bodyLength - player.finSize * 0.8);
+            ctx.closePath();
             ctx.fill();
 
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-            ctx.lineWidth = 1;
+            // Right fin
             ctx.beginPath();
-            ctx.moveTo(-player.bodyWidth/4, -player.bodyLength);
-            ctx.lineTo(-player.bodyWidth/4, player.bodyLength);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(player.bodyWidth/4, -player.bodyLength);
-            ctx.lineTo(player.bodyWidth/4, player.bodyLength);
-            ctx.stroke();
+            ctx.moveTo(player.bodyWidth/2 - 2, player.bodyLength);
+            ctx.lineTo(player.bodyWidth/2 + player.finSize * 1.2 - 2, player.bodyLength + player.finSize);
+            ctx.lineTo(player.bodyWidth/2 - 2, player.bodyLength - player.finSize * 0.8);
+            ctx.closePath();
+            ctx.fill();
 
+            // Window
             ctx.fillStyle = '#000000';
             ctx.beginPath();
             ctx.arc(0, -player.bodyLength/2, 3, 0, Math.PI * 2);
             ctx.fill();
 
+            // Thrust animation
             if (player.isThrusting) {
                 const thrustSize = 10 + Math.sin(player.thrustFrame * 0.3) * 3;
                 const thrustColor = THRUST_COLORS[Math.floor(player.thrustFrame / 2) % THRUST_COLORS.length];
