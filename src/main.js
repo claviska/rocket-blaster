@@ -2,7 +2,7 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const scoreDisplay = document.getElementById('score');
 const zeroGravityToggle = document.getElementById('zeroGravityToggle');
-const shotsFiredDisplay = document.getElementById('shotsFired');
+const accuracyDisplay = document.getElementById('accuracy');
 const hitsDisplay = document.getElementById('hits');
 const gameOverDisplay = document.getElementById('gameOver');
 const startDialog = document.getElementById('startDialog');
@@ -1224,8 +1224,8 @@ function draw() {
   drawPlayer();
   bullets.forEach(b => b.draw());
   scoreDisplay.textContent = `Score: ${score}`;
-  shotsFiredDisplay.textContent = `Fired: ${shotsFired}`;
   hitsDisplay.textContent = `Hits: ${hits}`;
+  accuracyDisplay.textContent = `Accuracy: ${shotsFired > 0 ? Math.round((hits / shotsFired) * 100) : 0}%`;
   if (flashActive) {
     const elapsed = Date.now() - flashStartTime;
     let flashOpacity;
