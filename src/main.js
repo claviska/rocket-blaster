@@ -411,60 +411,104 @@ class Asteroid {
       drawAsteroidShape();
       ctx.fill();
 
-      // Simplified crater generation and drawing
+      // Generate craters if not already created
       if (!this.craters) {
-        this.craters = Array(Math.floor(Math.random() * 3) + 2)
-          .fill()
-          .map(() => ({
-            x: Math.cos(Math.random() * Math.PI * 2) * this.size * 0.6,
-            y: Math.sin(Math.random() * Math.PI * 2) * this.size * 0.6,
-            radius: Math.random() * (this.size * 0.25) + this.size * 0.1,
-            depth: Math.random() * 0.6 + 0.2,
-            rimWidth: Math.random() * 0.3 + 0.1,
-            rimLight: Math.random() * 0.4 + 0.3
-          }));
+        const craterCount = Math.floor(Math.random() * 3) + 5; // 5-7 craters
+        this.craters = [];
+        const minDistance = this.size * 0.3; // Minimum distance between craters
+
+        // Function to check if a point is too close to existing craters
+        const isTooClose = (x, y, existingCraters, radius) => {
+          return existingCraters.some(c => {
+            const dx = c.x - x;
+            const dy = c.y - y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            return distance < minDistance + c.radius + radius;
+          });
+        };
+
+        for (let i = 0; i < craterCount; i++) {
+          let attempts = 0;
+          let newCrater;
+          do {
+            const angle = Math.random() * Math.PI * 2;
+            const distance = Math.random() * this.size * 0.7;
+            const radius = Math.random() * (this.size * 0.2) + this.size * 0.08;
+            newCrater = {
+              x: Math.cos(angle) * distance,
+              y: Math.sin(angle) * distance,
+              radius: radius,
+              depth: Math.random() * 0.6 + 0.2,
+              rimWidth: Math.random() * 0.3 + 0.1,
+              rimLight: Math.random() * 0.4 + 0.3
+            };
+            attempts++;
+          } while (isTooClose(newCrater.x, newCrater.y, this.craters, newCrater.radius) && attempts < 20);
+
+          if (attempts < 20) {
+            // Only add if we found a valid position
+            this.craters.push(newCrater);
+          }
+        }
       }
 
+      // Save state and clip to asteroid shape for craters
+      ctx.save();
+      drawAsteroidShape();
+      ctx.clip();
+
       this.craters.forEach(crater => {
-        // Crater shadow
-        const shadowGradient = ctx.createRadialGradient(crater.x, crater.y, 0, crater.x, crater.y, crater.radius);
-        const shadowColor = adjustColor(baseColor, -90);
-        const midShadow = adjustColor(baseColor, -60);
-        shadowGradient.addColorStop(0, `rgba(${shadowColor.r}, ${shadowColor.g}, ${shadowColor.b}, ${crater.depth})`);
-        shadowGradient.addColorStop(0.7, `rgba(${midShadow.r}, ${midShadow.g}, ${midShadow.b}, ${crater.depth * 0.8})`);
-        shadowGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        // Crater shadow (less dark)
+        const shadowGradient = ctx.createRadialGradient(
+          crater.x + crater.radius * 0.2, // Slight offset for light source
+          crater.y - crater.radius * 0.2,
+          0,
+          crater.x,
+          crater.y,
+          crater.radius * 1.2
+        );
+        const deepShadow = adjustColor(baseColor, -110); // Lightened from -140
+        const midShadow = adjustColor(baseColor, -100); // Unchanged
+        shadowGradient.addColorStop(
+          0,
+          `rgba(${deepShadow.r}, ${deepShadow.g}, ${deepShadow.b}, ${crater.depth * 1.3})`
+        );
+        shadowGradient.addColorStop(0.6, `rgba(${midShadow.r}, ${midShadow.g}, ${midShadow.b}, ${crater.depth * 1.0})`);
+        shadowGradient.addColorStop(1, `rgba(${midShadow.r}, ${midShadow.g}, ${midShadow.b}, 0)`); // Fade to darker tone
 
         ctx.fillStyle = shadowGradient;
         ctx.beginPath();
         ctx.arc(crater.x, crater.y, crater.radius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Crater rim
+        // Crater rim (darker, no white)
         const rimGradient = ctx.createRadialGradient(
-          crater.x - crater.radius * 0.2,
-          crater.y - crater.radius * 0.2,
-          crater.radius * (1 - crater.rimWidth),
+          crater.x - crater.radius * 0.3, // Stronger light source offset
+          crater.y - crater.radius * 0.3,
+          crater.radius * (1 - crater.rimWidth * 1.2), // Slightly thicker rim
           crater.x,
           crater.y,
-          crater.radius * 1.1
+          crater.radius * 1.15 // Slightly larger rim
         );
-        const highlightColor = adjustColor(baseColor, 80);
-        const lightColor = adjustColor(baseColor, 40);
+        const highlightColor = adjustColor(baseColor, 50); // Unchanged
+        const lightColor = adjustColor(baseColor, 20); // Unchanged
         rimGradient.addColorStop(
           0,
-          `rgba(${highlightColor.r}, ${highlightColor.g}, ${highlightColor.b}, ${crater.rimLight})`
+          `rgba(${highlightColor.r}, ${highlightColor.g}, ${highlightColor.b}, ${crater.rimLight * 1.2})`
         );
         rimGradient.addColorStop(
-          0.3,
-          `rgba(${lightColor.r}, ${lightColor.g}, ${lightColor.b}, ${crater.rimLight * 0.7})`
+          0.4,
+          `rgba(${lightColor.r}, ${lightColor.g}, ${lightColor.b}, ${crater.rimLight * 0.8})`
         );
-        rimGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        rimGradient.addColorStop(1, `rgba(${baseColor.r}, ${baseColor.g}, ${baseColor.b}, 0)`); // Fade to base color
 
         ctx.fillStyle = rimGradient;
         ctx.beginPath();
-        ctx.arc(crater.x, crater.y, crater.radius * 1.1, 0, Math.PI * 2);
+        ctx.arc(crater.x, crater.y, crater.radius * 1.15, 0, Math.PI * 2);
         ctx.fill();
       });
+
+      ctx.restore(); // Restore state after drawing clipped craters
     }
 
     ctx.restore();
