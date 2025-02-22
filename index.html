@@ -308,6 +308,7 @@
         const BULLET_COLOR = '#FFBF00';
         const STAR_SPAWN_MIN = 25000; // 25 seconds
         const STAR_SPAWN_MAX = 50000; // 50 seconds
+        const STARTING_ASTEROIDS = 4;
 
         const stars = [];
         const STAR_COUNT = 50;
@@ -738,8 +739,9 @@
             }
         }
 
-        asteroids.push(new Asteroid());
-        asteroids.push(new Asteroid());
+        for (let i = 0; i < STARTING_ASTEROIDS; i++) {
+           asteroids.push(new Asteroid());
+        }
 
         function drawStars() {
             const centerX = canvas.width / 2;
@@ -848,7 +850,7 @@
             player.exploded = false;
             player.pieces = [];
             bullets = [];
-            asteroids = [new Asteroid(), new Asteroid()];
+            asteroids = Array(STARTING_ASTEROIDS).fill().map(() => new Asteroid());
             powerUps = [];
             pendingAsteroids = [];
             score = 0;
@@ -1057,8 +1059,9 @@
                             score += (destroyedCount * 50) + 1000;
                             powerUps.splice(i, 1);
                             asteroids = asteroids.filter(a => a.exploded && a.explosionLife > 0);
-                            asteroids.push(new Asteroid());
-                            asteroids.push(new Asteroid());
+                            for (let i = 0; i < STARTING_ASTEROIDS; i++) {
+                                asteroids.push(new Asteroid());
+                            }
                             pendingAsteroids = [];
                             flashActive = true;
                             flashStartTime = Date.now();
