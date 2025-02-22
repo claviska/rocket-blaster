@@ -992,7 +992,7 @@
                                     hits++;
                                 }
                             });
-                            score += (destroyedCount * 50) + 100;
+                            score += (destroyedCount * 50) + 1000;
                             powerUps.splice(i, 1);
                             asteroids = asteroids.filter(a => a.exploded && a.explosionLife > 0);
                             asteroids.push(new Asteroid());
