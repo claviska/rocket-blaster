@@ -19,7 +19,5 @@ npm start
 ## Ideas
 
 - add sound
-- show elapsed time
-- show accuracy rate
-- coins to collect
 - maintain the high score and show it on the menu
+- coins to collect

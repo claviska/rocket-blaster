@@ -29,7 +29,7 @@ body {
   text-shadow: 0 0 5px rgba(0, 255, 204, 0.8);
 }
 
-#hits {
+#accuracy {
   z-index: 1;
   position: absolute;
   top: 50px;
@@ -41,7 +41,7 @@ body {
   text-shadow: 0 0 5px rgba(0, 255, 204, 0.8);
 }
 
-#accuracy {
+#hits {
   z-index: 1;
   position: absolute;
   top: 75px;
@@ -49,6 +49,18 @@ body {
   color: #00ffcc;
   font-weight: 700;
   font-size: 20px;
+  font-family: 'Orbitron', sans-serif;
+  text-shadow: 0 0 5px rgba(0, 255, 204, 0.8);
+}
+
+#timer {
+  z-index: 1;
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  color: #00ffcc;
+  font-weight: 700;
+  font-size: 24px;
   font-family: 'Orbitron', sans-serif;
   text-shadow: 0 0 5px rgba(0, 255, 204, 0.8);
 }

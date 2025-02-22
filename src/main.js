@@ -4,6 +4,7 @@ const scoreDisplay = document.getElementById('score');
 const zeroGravityToggle = document.getElementById('zeroGravityToggle');
 const accuracyDisplay = document.getElementById('accuracy');
 const hitsDisplay = document.getElementById('hits');
+const timerDisplay = document.getElementById('timer');
 const gameOverDisplay = document.getElementById('gameOver');
 const startDialog = document.getElementById('startDialog');
 const touchControls = document.getElementById('touchControls');
@@ -845,6 +846,7 @@ function startGame() {
   gameStarted = true;
   startDialog.style.display = 'none';
   gameStartTime = Date.now();
+  timerDisplay.textContent = '0:00';
   pendingStarSpawnTime = Date.now() + Math.random() * (STAR_SPAWN_MAX - STAR_SPAWN_MIN) + STAR_SPAWN_MIN;
   pendingShieldSpawnTime = Date.now() + Math.random() * (SHIELD_SPAWN_MAX - SHIELD_SPAWN_MIN) + SHIELD_SPAWN_MIN;
 }
@@ -874,6 +876,7 @@ function restartGame() {
   asteroidsDestroyed = 0;
   gameOverDisplay.style.display = 'none';
   gameStartTime = Date.now();
+  timerDisplay.textContent = '0:00';
   pendingStarSpawnTime = Date.now() + Math.random() * (STAR_SPAWN_MAX - STAR_SPAWN_MIN) + STAR_SPAWN_MIN;
   pendingShieldSpawnTime = Date.now() + Math.random() * (SHIELD_SPAWN_MAX - SHIELD_SPAWN_MIN) + SHIELD_SPAWN_MIN;
 
@@ -1216,6 +1219,23 @@ function update() {
   powerUps.forEach(p => p.move());
 }
 
+function formatTime(milliseconds) {
+  const minutes = Math.floor(milliseconds / 60000);
+  const seconds = Math.floor((milliseconds % 60000) / 1000);
+
+  return (
+    new Intl.NumberFormat('en-US', {
+      minimumIntegerDigits: 1,
+      useGrouping: false
+    }).format(minutes) +
+    ':' +
+    new Intl.NumberFormat('en-US', {
+      minimumIntegerDigits: 2,
+      useGrouping: false
+    }).format(seconds)
+  );
+}
+
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawStars();
@@ -1224,8 +1244,15 @@ function draw() {
   drawPlayer();
   bullets.forEach(b => b.draw());
   scoreDisplay.textContent = `Score: ${score}`;
-  hitsDisplay.textContent = `Hits: ${hits}`;
   accuracyDisplay.textContent = `Accuracy: ${shotsFired > 0 ? Math.round((hits / shotsFired) * 100) : 0}%`;
+  hitsDisplay.textContent = `Hits: ${hits}`;
+
+  // Update timer
+  if (gameStarted && !player.exploded) {
+    const elapsedTime = Date.now() - gameStartTime;
+    timerDisplay.textContent = formatTime(elapsedTime);
+  }
+
   if (flashActive) {
     const elapsed = Date.now() - flashStartTime;
     let flashOpacity;
