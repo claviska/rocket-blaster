@@ -109,7 +109,7 @@ window.addEventListener('keydown', e => {
     asteroids.push(new Asteroid());
   }
 
-  if (!gameStarted) {
+  if (!gameStarted && !e.metaKey && !e.shiftKey && !e.ctrlKey) {
     startGame();
   } else if (player.exploded && player.pieces.length === 0) {
     restartGame();
@@ -126,7 +126,11 @@ const touchState = {
 };
 
 function handleTouchStart(e) {
+  const target = e.target;
+  if (target.closest('input') || target.closest('label')) return;
+
   e.preventDefault();
+
   const touches = e.touches;
   for (let i = 0; i < touches.length; i++) {
     const touch = touches[i];
