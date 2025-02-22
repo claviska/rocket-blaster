@@ -65,7 +65,7 @@ body {
   text-shadow: 0 0 5px rgba(0, 255, 204, 0.8);
 
   &.is-current {
-    color: #ff3366;
+    color: #ffbf00;
     text-shadow: 0 0 5px rgba(255, 51, 102, 0.8);
     animation: blink-new-score 3s ease-in-out infinite;
   }
@@ -108,6 +108,10 @@ body {
   font-family: 'Orbitron', sans-serif;
   text-align: center;
   text-shadow: 0 0 10px rgba(255, 51, 102, 0.8);
+
+  small {
+    font-size: 32px;
+  }
 }
 
 #startDialog {

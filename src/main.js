@@ -896,11 +896,11 @@ function updateHighScore() {
   if (score > cachedHighScore) {
     cachedHighScore = score;
     localStorage.setItem('highScore', score);
-    highScoreDisplay.textContent = `High Score: ${score}`;
+    highScoreDisplay.textContent = `High: ${score}`;
     highScoreDisplay.style.display = 'block';
     highScoreDisplay.classList.add('is-current');
   } else if (cachedHighScore > 0) {
-    highScoreDisplay.textContent = `High Score: ${cachedHighScore}`;
+    highScoreDisplay.textContent = `High: ${cachedHighScore}`;
     highScoreDisplay.style.display = 'block';
   } else {
     highScoreDisplay.style.display = 'none';
