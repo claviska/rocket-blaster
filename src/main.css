@@ -1,0 +1,245 @@
+canvas {
+  width: 100vw;
+  height: 100dvh;
+  margin: 0;
+  background: black;
+}
+
+body {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: black;
+}
+
+#score {
+  z-index: 1;
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  color: #00ffcc;
+  font-weight: 700;
+  font-size: 24px;
+  font-family: 'Orbitron', sans-serif;
+  text-shadow: 0 0 5px rgba(0, 255, 204, 0.8);
+}
+
+#shotsFired {
+  z-index: 1;
+  position: absolute;
+  top: 50px;
+  left: 20px;
+  color: #00ffcc;
+  font-weight: 700;
+  font-size: 20px;
+  font-family: 'Orbitron', sans-serif;
+  text-shadow: 0 0 5px rgba(0, 255, 204, 0.8);
+}
+
+#hits {
+  z-index: 1;
+  position: absolute;
+  top: 75px;
+  left: 20px;
+  color: #00ffcc;
+  font-weight: 700;
+  font-size: 20px;
+  font-family: 'Orbitron', sans-serif;
+  text-shadow: 0 0 5px rgba(0, 255, 204, 0.8);
+}
+
+#gameOver {
+  display: none;
+  z-index: 1;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  transform: translate(-50%, -50%);
+  color: #ff3366;
+  font-weight: 900;
+  font-size: 64px;
+  line-height: 1.2;
+  font-family: 'Orbitron', sans-serif;
+  text-align: center;
+  text-shadow: 0 0 10px rgba(255, 51, 102, 0.8);
+}
+
+#startDialog {
+  z-index: 1;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 80%;
+  max-width: 700px;
+  padding: 20px;
+  transform: translate(-50%, -50%);
+  border: 2px solid #00ffcc;
+  border-radius: 10px;
+  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.7);
+  color: #00ffcc;
+  font-weight: 700;
+  font-size: 32px;
+  line-height: 1.5;
+  font-family: 'Orbitron', sans-serif;
+  text-align: center;
+  text-shadow: 0 0 8px rgba(0, 255, 204, 0.8);
+
+  h1 {
+    margin: 0;
+    color: rgb(2, 183, 255);
+    text-shadow: 0 0 8px rgb(2, 183, 255, 0.8);
+  }
+
+  .subtitle {
+    color: rgb(214, 53, 215);
+    text-shadow: 0 0 8px rgb(214, 53, 215, 0.8);
+  }
+}
+
+#zeroGravityToggle {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  width: 50px;
+  height: 26px;
+  margin: 0 8px;
+  border: 2px solid #00ffcc;
+  border-radius: 26px;
+  background: transparent;
+  box-shadow: 0 0 8px #00ffcc;
+  vertical-align: middle;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#zeroGravityToggle::after {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #00ffcc;
+  box-shadow: 0 0 5px rgba(0, 255, 204, 0.5);
+  content: '';
+  transition: all 0.3s ease;
+}
+
+#zeroGravityToggle:checked {
+  border-color: #00ffcc;
+  background: rgba(0, 255, 204, 0.3);
+  box-shadow: 0 0 12px #00ffcc;
+}
+
+#zeroGravityToggle:checked::after {
+  transform: translateX(24px);
+  background: #00ffcc;
+  box-shadow: 0 0 8px #00ffcc;
+}
+
+#zeroGravityToggle:active::after {
+  width: 26px; /* Slight squeeze effect when clicking */
+}
+
+.gravity-label {
+  cursor: pointer;
+}
+
+#touchControls {
+  display: none; /* Hidden by default, shown on touch devices */
+  z-index: 2;
+  position: absolute;
+  width: 100%;
+  height: 100dvh; /* Use dynamic viewport height */
+}
+
+.touchButton {
+  display: flex;
+  position: absolute;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border: 2px solid #00ffcc;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  color: #00ffcc;
+  font-size: 40px;
+  text-shadow: 0 0 5px rgba(0, 255, 204, 0.8);
+  opacity: 0.7;
+  touch-action: none;
+}
+
+#leftButton {
+  bottom: 100px; /* Increased to avoid bottom bar */
+  left: 20px;
+}
+
+#rightButton {
+  bottom: 100px; /* Increased to avoid bottom bar */
+  left: 120px;
+}
+
+#thrustButton {
+  right: 120px;
+  bottom: 100px; /* Increased to avoid bottom bar */
+}
+
+#shootButton {
+  right: 20px;
+  bottom: 100px; /* Increased to avoid bottom bar */
+}
+
+/* Show touch controls on all touch devices, including iPhone in portrait */
+@media (hover: none) and (pointer: coarse) {
+  #touchControls {
+    display: block;
+  }
+}
+
+/* Adjust button positions for smaller screens (e.g., iPhone portrait) */
+@media (max-height: 700px) {
+  #leftButton {
+    bottom: 80px; /* Slightly lower if screen is short */
+  }
+
+  #rightButton {
+    bottom: 80px;
+  }
+
+  #thrustButton {
+    bottom: 80px;
+  }
+
+  #shootButton {
+    bottom: 80px;
+  }
+}
+
+/* Double touch button size on Mobile Safari in portrait orientation only */
+@media (hover: none) and (pointer: coarse) and (orientation: portrait) and (-webkit-min-device-pixel-ratio: 2) {
+  .touchButton {
+    width: 160px;
+    height: 160px;
+    font-size: 80px; /* Double the font size to match */
+  }
+
+  #leftButton {
+    left: 20px;
+  }
+
+  #rightButton {
+    left: 200px; /* Adjusted to account for larger size */
+  }
+
+  #thrustButton {
+    right: 200px; /* Adjusted to account for larger size */
+  }
+
+  #shootButton {
+    right: 20px;
+  }
+}

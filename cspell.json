@@ -6,6 +6,7 @@
   "language": "en,lorem",
   // words - list of words to be always considered correct
   "words": [
+    "LaViska",
     "smacss"
   ],
   // flagWords - list of words to be always considered incorrect

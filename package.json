@@ -5,7 +5,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "npx http-server -o",
+    "start": "npx http-server ./src -o -c-1",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -24,6 +24,7 @@
   },
   "homepage": "https://github.com/claviska/rocket-blaster#readme",
   "devDependencies": {
+    "http-server": "^14.1.1",
     "prettier": "^3.5.1",
     "prettier-plugin-css-order": "^2.1.2",
     "prettier-plugin-organize-imports": "^4.1.0"

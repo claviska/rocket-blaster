@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Rocket Blaster</title>
+    <meta name="description" content="A shoot 'em up game in outer space." />
+    <link rel="icon" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <link rel="stylesheet" href="main.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet" />
+    <script defer data-domain="rocket-blaster.vercel.app" src="https://plausible.io/js/script.js"></script>
+  </head>
+  <body>
+    <div id="score">Score: 0</div>
+    <div id="shotsFired">Fired: 0</div>
+    <div id="hits">Hits: 0</div>
+    <div id="gameOver">Game Over<br /><br />tap to restart</div>
+    <div id="startDialog">
+      <h1>Rocket Blaster</h1>
+      <div class="subtitle">Destroy asteroids and earn points</div>
+      <br />
+      Move: arrows<br />
+      Shoot: space<br />
+      <label class="gravity-label"><input type="checkbox" id="zeroGravityToggle" /> Zero Gravity </label><br /><br />
+      Press any key or tap to start...
+    </div>
+    <div id="touchControls">
+      <div id="leftButton" class="touchButton">←</div>
+      <div id="rightButton" class="touchButton">→</div>
+      <div id="thrustButton" class="touchButton">↑</div>
+      <div id="shootButton" class="touchButton"></div>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+    <script src="main.js"></script>
+  </body>
+</html>

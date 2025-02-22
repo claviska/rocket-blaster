@@ -8,6 +8,14 @@ Have fun!
 
 ---
 
+## Local development
+
+Run `npm install` to ensure dev dependencies are installed, then launch the game locally.
+
+```sh
+npm start
+```
+
 ## Ideas
 
 - add sound
