@@ -147,7 +147,7 @@ body {
   }
 
   /* Adjust sizes for iOS devices */
-  @media (hover: none) and (pointer: coarse) and (-webkit-min-device-pixel-ratio: 2) {
+  @media screen and (max-width: 767px) {
     padding: 15px;
     font-size: 24px;
 
@@ -218,7 +218,7 @@ body {
   height: 100dvh;
 }
 
-/* Show touch controls on iOS/touch devices */
+/* Show touch controls on touch devices */
 @media (hover: none) and (pointer: coarse) {
   #touchControls {
     display: block;
