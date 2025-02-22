@@ -11,8 +11,8 @@ const STARTING_ASTEROIDS = 3;
 const INCREASE_ASTEROIDS_EVERY_N_HITS = 5;
 const STAR_SPAWN_MIN = 60000; // 60 seconds
 const STAR_SPAWN_MAX = 90000; // 90 seconds
-const SHIELD_SPAWN_MIN = 15000; // 30 seconds
-const SHIELD_SPAWN_MAX = 30000; // 60 seconds
+const SHIELD_SPAWN_MIN = 30000; // 30 seconds
+const SHIELD_SPAWN_MAX = 5000; // 60 seconds
 const SHIELD_DURATION = 8000; // 8 seconds
 const SHIELD_ROTATION_DURATION = 2500;
 const SHIELD_BLINK_DURATION = 2000; // 2 seconds blink warning
@@ -720,7 +720,7 @@ class Shield {
     ctx.beginPath();
     ctx.arc(0, 0, this.size, 0, Math.PI * 2);
     ctx.strokeStyle = 'white';
-    ctx.setLineDash([5, 5]);
+    ctx.setLineDash([12, 12]);
     ctx.lineWidth = 2;
     ctx.stroke();
 
@@ -778,7 +778,7 @@ function drawPlayer() {
       ctx.beginPath();
       ctx.arc(0, 0, player.hitRadius * 1.5, 0, Math.PI * 2);
       ctx.strokeStyle = 'white';
-      ctx.setLineDash([5, 5]);
+      ctx.setLineDash([12, 12]);
       ctx.lineWidth = 2;
       ctx.stroke();
       ctx.restore();
