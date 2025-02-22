@@ -19,4 +19,3 @@ npm start
 ## Ideas
 
 - add sound
-- coins to collect
