@@ -18,13 +18,14 @@ npm start
 
 ## Ideas
 
-- scale down on phones
+- scale the game down on phones
 - ship color selection
 - black hole
   - appears for 10 seconds
   - scales in but doesn't move
   - sucks in asteroids and maybe the rocket with gravitational physics when too close
-- add sound
+- sounds
+  - ability to turn on/off with icon at top right
   - when the game starts:
   - when you shoot (need to crop): https://audiojungle.net/item/space-gun/17362803
   - when an asteroid explodes:
