@@ -1269,4 +1269,13 @@ window.addEventListener('resize', () => {
   });
 });
 
+// Cheap focus-visible-like heuristic
+window.addEventListener('keydown', () => {
+  document.documentElement.classList.add('is-using-keyboard');
+});
+
+window.addEventListener('mousemove', () => {
+  document.documentElement.classList.remove('is-using-keyboard');
+});
+
 gameLoop();

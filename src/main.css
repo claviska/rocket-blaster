@@ -5,6 +5,10 @@ canvas {
   background: black;
 }
 
+html.is-using-keyboard {
+  cursor: none;
+}
+
 body {
   position: relative;
   margin: 0;
