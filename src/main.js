@@ -824,11 +824,23 @@ function drawPlayer() {
   ctx.rotate(player.angle + Math.PI / 2);
 
   // Apply scaling while maintaining proper dimensions
-  const scale = (window.devicePixelRatio || 1) * 0.625; // Increased by 25%
+  const scale = (window.devicePixelRatio || 1) * 0.625;
   ctx.scale(player.pulseScale * player.shootScale * scale, player.pulseScale * player.shootScale * scale);
 
-  // Main body
+  // Main body with gradient
   ctx.fillStyle = ROCKET_COLOR;
+  ctx.beginPath();
+  ctx.moveTo(-player.bodyWidth / 2, player.bodyLength);
+  ctx.quadraticCurveTo(-player.bodyWidth / 4, 0, -player.bodyWidth / 2, -player.bodyLength);
+  ctx.lineTo(player.bodyWidth / 2, -player.bodyLength);
+  ctx.quadraticCurveTo(player.bodyWidth / 4, 0, player.bodyWidth / 2, player.bodyLength);
+  ctx.fill();
+
+  // Add gradient overlay
+  const gradient = ctx.createLinearGradient(0, -player.bodyLength, 0, player.bodyLength);
+  gradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+  gradient.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
+  ctx.fillStyle = gradient;
   ctx.beginPath();
   ctx.moveTo(-player.bodyWidth / 2, player.bodyLength);
   ctx.quadraticCurveTo(-player.bodyWidth / 4, 0, -player.bodyWidth / 2, -player.bodyLength);
@@ -843,7 +855,7 @@ function drawPlayer() {
   ctx.fill();
 
   // Left fin
-  ctx.fillStyle = ROCKET_COLOR;
+  ctx.fillStyle = ROCKET_ACCENT; // Changed from ROCKET_COLOR
   ctx.beginPath();
   ctx.moveTo(-player.bodyWidth / 2 + 2, player.bodyLength);
   ctx.lineTo(-player.bodyWidth / 2 - player.finSize * 1.2 + 2, player.bodyLength + player.finSize);
@@ -852,6 +864,7 @@ function drawPlayer() {
   ctx.fill();
 
   // Right fin
+  ctx.fillStyle = ROCKET_ACCENT; // Changed from ROCKET_COLOR
   ctx.beginPath();
   ctx.moveTo(player.bodyWidth / 2 - 2, player.bodyLength);
   ctx.lineTo(player.bodyWidth / 2 + player.finSize * 1.2 - 2, player.bodyLength + player.finSize);
