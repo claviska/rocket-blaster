@@ -6,6 +6,12 @@ Built by [@cory_laviska](https://x.com/cory_laviska) using Grok 3 and a sprinkle
 
 Have fun!
 
-## TODO
+---
 
-- [ ] Add sound
+## Ideas
+
+- add sound
+- show elapsed time
+- show accuracy rate
+- coins to collect
+- maintain the high score and show it on the menu
