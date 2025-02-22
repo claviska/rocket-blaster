@@ -906,9 +906,27 @@ function update() {
       gameOverDisplay.style.display = 'block';
     }
   } else {
-    // Handle rotation
-    if (keys['ArrowLeft'] || touchState.left) player.angle -= 0.1;
-    if (keys['ArrowRight'] || touchState.right) player.angle += 0.1;
+    // Handle rotation with easing
+    const maxRotationSpeed = 0.1;
+    const rotationEasing = 0.2;
+
+    // Target rotation speed based on input
+    let targetRotationSpeed = 0;
+    if (keys['ArrowLeft'] || touchState.left) targetRotationSpeed = -maxRotationSpeed;
+    if (keys['ArrowRight'] || touchState.right) targetRotationSpeed = maxRotationSpeed;
+
+    // Add rotationSpeed to player if it doesn't exist
+    if (typeof player.rotationSpeed === 'undefined') player.rotationSpeed = 0;
+
+    // Ease into the target rotation speed
+    player.rotationSpeed += (targetRotationSpeed - player.rotationSpeed) * rotationEasing;
+
+    // Apply rotation with small threshold to prevent micro-rotations
+    if (Math.abs(player.rotationSpeed) > 0.001) {
+      player.angle += player.rotationSpeed;
+    } else {
+      player.rotationSpeed = 0;
+    }
 
     const isZeroGravity = zeroGravityToggle.checked;
     const isThrusting = keys['ArrowUp'] || touchState.thrust;
