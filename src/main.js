@@ -509,13 +509,15 @@ class Star {
     this.pulseScale = 1;
     this.pulseSpeed = 0.01;
     this.pulsePhase = Math.random() * Math.PI * 2;
+    this.colorPulseSpeed = 0.02; // Speed of color flashing
+    this.colorPulsePhase = Math.random() * Math.PI * 2; // Random starting phase for color pulse
     this.spawnTime = Date.now();
     this.lifeTime = 10000; // 10 seconds
     this.fadeInDuration = 1000;
     this.fadeOutDuration = 1000;
     this.scale = 0;
     this.opacity = 0;
-    this.color = '#FFFF00';
+    this.baseColor = { r: 255, g: 255, b: 0 }; // Base yellow color in RGB
   }
 
   move() {
@@ -610,10 +612,19 @@ class Star {
     );
     ctx.closePath();
 
+    // Calculate the color pulse factor (0 to 1)
+    const colorPulse = (Math.sin(Date.now() * this.colorPulseSpeed + this.colorPulsePhase) + 1) / 2; // Ranges from 0 to 1
+    const almostWhite = { r: 240, g: 240, b: 240 }; // Almost-white color
+
+    // Interpolate between base yellow and almost-white
+    const r = Math.round(this.baseColor.r + (almostWhite.r - this.baseColor.r) * colorPulse);
+    const g = Math.round(this.baseColor.g + (almostWhite.g - this.baseColor.g) * colorPulse);
+    const b = Math.round(this.baseColor.b + (almostWhite.b - this.baseColor.b) * colorPulse);
+
     const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size);
-    gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-    gradient.addColorStop(0.5, 'rgba(255, 255, 0, 1)');
-    gradient.addColorStop(1, 'rgba(255, 215, 0, 0.7)');
+    gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 1)`); // Center starts with pulsed color
+    gradient.addColorStop(0.5, `rgba(${this.baseColor.r}, ${this.baseColor.g}, ${this.baseColor.b}, 1)`); // Midpoint stays yellow
+    gradient.addColorStop(1, `rgba(${this.baseColor.r}, ${this.baseColor.g}, 0, 0.7)`); // Edge fades to transparent yellow
     ctx.fillStyle = gradient;
     ctx.fill();
 
