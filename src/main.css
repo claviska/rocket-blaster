@@ -127,6 +127,7 @@ body {
   border-radius: 10px;
   backdrop-filter: blur(8px);
   background: rgba(0, 0, 0, 0.7);
+  background: color-mix(in oklab, #06000b, transparent 70%);
   color: #00ffcc;
   font-weight: 700;
   font-size: 32px;

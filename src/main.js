@@ -1276,7 +1276,13 @@ function formatTime(milliseconds) {
 }
 
 function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Create a gradient for the background
+  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  gradient.addColorStop(0, '#06000b'); // Dark blue at the top
+  gradient.addColorStop(1, '#1c042f'); // Lighter blue at the bottom
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
   drawStars();
   asteroids.forEach(a => a.draw());
   powerUps.forEach(p => p.draw());
