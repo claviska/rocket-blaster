@@ -67,8 +67,11 @@ const THRUST_COLORS = ['#FF6B00', '#FF9500', '#FFC107'];
 const ASTEROID_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#A100A1'];
 const ASTEROID_MIN_SIZE = 20;
 const ASTEROID_MAX_SIZE = 45;
+const ASTEROID_SPAWN_MIN = 1000; // 1 second
+const ASTEROID_SPAWN_MAX = 4000; // 4 seconds
 const BULLET_COLOR = '#FFBF00';
 const STARTING_ASTEROIDS = 3;
+const INCREASE_ASTEROIDS_EVERY_N_HITS = 5;
 const STAR_SPAWN_MIN = 60000; // 60 seconds
 const STAR_SPAWN_MAX = 90000; // 90 seconds
 const SHIELD_SPAWN_MIN = 15000; // 30 seconds
@@ -237,9 +240,6 @@ class Asteroid {
     this.hitRadius = this.size * 1.2;
     this.rotationAngle = 0;
     this.rotationSpeed = Math.random() * 0.02 - 0.01;
-    this.throbScale = 1;
-    this.throbSpeed = Math.random() * 0.01 + 0.005;
-    this.throbPhase = Math.random() * Math.PI * 2;
     this.spawnTime = Date.now();
     this.gracePeriod = 1000;
     this.fadeInDuration = 1000;
@@ -291,7 +291,6 @@ class Asteroid {
     }
 
     this.rotationAngle += this.rotationSpeed;
-    this.throbScale = 1 + Math.sin(Date.now() * this.throbSpeed + this.throbPhase) * 0.03;
 
     const elapsed = Date.now() - this.spawnTime;
     if (elapsed < this.fadeInDuration) {
@@ -311,7 +310,7 @@ class Asteroid {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rotationAngle);
-    ctx.scale(this.throbScale * this.scale, this.throbScale * this.scale);
+    ctx.scale(this.scale, this.scale);
 
     // Create base gradient
     const gradient = ctx.createRadialGradient(this.size * 0.3, -this.size * 0.3, 0, 0, 0, this.size * 1.2);
@@ -1051,10 +1050,12 @@ function update() {
           hits++;
           asteroidsDestroyed += 1;
 
-          asteroids.push(new Asteroid());
+          // Spawn a new asteroid soon
+          const delay = Math.random() * (ASTEROID_SPAWN_MAX - ASTEROID_SPAWN_MIN) + ASTEROID_SPAWN_MIN;
+          pendingAsteroids.push({ spawnTime: Date.now() + delay });
 
-          if (asteroidsDestroyed % 3 === 0) {
-            const delay = Math.random() * 4000 + 1000;
+          if (asteroidsDestroyed % INCREASE_ASTEROIDS_EVERY_N_HITS === 0) {
+            const delay = Math.random() * (ASTEROID_SPAWN_MAX - ASTEROID_SPAWN_MIN) + ASTEROID_SPAWN_MIN;
             pendingAsteroids.push({ spawnTime: Date.now() + delay });
           }
           break;
@@ -1082,10 +1083,12 @@ function update() {
               score += 50;
               hits++;
 
-              asteroids.push(new Asteroid());
+              const delay = Math.random() * (ASTEROID_SPAWN_MAX - ASTEROID_SPAWN_MIN) + ASTEROID_SPAWN_MIN;
+              pendingAsteroids.push({ spawnTime: Date.now() + delay });
+
               asteroidsDestroyed += 1;
-              if (asteroidsDestroyed % 3 === 0) {
-                const delay = Math.random() * 4000 + 1000;
+              if (asteroidsDestroyed % INCREASE_ASTEROIDS_EVERY_N_HITS === 0) {
+                const delay = Math.random() * (ASTEROID_SPAWN_MAX - ASTEROID_SPAWN_MIN) + ASTEROID_SPAWN_MIN;
                 pendingAsteroids.push({ spawnTime: Date.now() + delay });
               }
             } else {
