@@ -146,7 +146,7 @@ body {
     text-shadow: 0 0 8px rgb(214, 53, 215, 0.8);
   }
 
-  /* Adjust sizes for iOS devices */
+  /* Adjust sizes for mobile devices */
   @media screen and (max-width: 767px) {
     padding: 15px;
     font-size: 24px;
