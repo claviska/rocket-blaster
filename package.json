@@ -1,0 +1,31 @@
+{
+  "name": "rocket-blaster",
+  "description": "A shoot 'em up game in outer space.",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "npx http-server -o",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/claviska/rocket-blaster.git"
+  },
+  "keywords": [
+    "html",
+    "canvas",
+    "games"
+  ],
+  "author": "Cory LaViska",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/claviska/rocket-blaster/issues"
+  },
+  "homepage": "https://github.com/claviska/rocket-blaster#readme",
+  "devDependencies": {
+    "prettier": "^3.5.1",
+    "prettier-plugin-css-order": "^2.1.2",
+    "prettier-plugin-organize-imports": "^4.1.0"
+  }
+}
