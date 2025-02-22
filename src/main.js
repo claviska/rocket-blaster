@@ -1,3 +1,25 @@
+const ROCKET_COLOR = '#00B7FF';
+const ROCKET_ACCENT = '#FFFFFF';
+const THRUST_COLORS = ['#FF6B00', '#FF9500', '#FFC107'];
+const ASTEROID_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#A100A1'];
+const ASTEROID_MIN_SIZE = 20;
+const ASTEROID_MAX_SIZE = 45;
+const ASTEROID_SPAWN_MIN = 1000; // 1 second
+const ASTEROID_SPAWN_MAX = 4000; // 4 seconds
+const BULLET_COLOR = '#FFBF00';
+const STARTING_ASTEROIDS = 3;
+const INCREASE_ASTEROIDS_EVERY_N_HITS = 5;
+const STAR_SPAWN_MIN = 60000; // 60 seconds
+const STAR_SPAWN_MAX = 90000; // 90 seconds
+const SHIELD_SPAWN_MIN = 15000; // 30 seconds
+const SHIELD_SPAWN_MAX = 30000; // 60 seconds
+const SHIELD_DURATION = 8000; // 8 seconds
+const SHIELD_ROTATION_DURATION = 2500;
+const SHIELD_BLINK_DURATION = 2000; // 2 seconds blink warning
+const HIGH_SCORE_DEFAULT_COLOR = '#00ffcc';
+const HIGH_SCORE_BEATEN_COLOR = '#ff3366';
+const STAR_COUNT = 50;
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const scoreDisplay = document.getElementById('score');
@@ -64,29 +86,7 @@ let fadeInTime = 25;
 let fullOpacityTime = 25;
 let fadeOutTime = 25;
 
-const ROCKET_COLOR = '#00B7FF';
-const ROCKET_ACCENT = '#FFFFFF';
-const THRUST_COLORS = ['#FF6B00', '#FF9500', '#FFC107'];
-const ASTEROID_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#A100A1'];
-const ASTEROID_MIN_SIZE = 20;
-const ASTEROID_MAX_SIZE = 45;
-const ASTEROID_SPAWN_MIN = 1000; // 1 second
-const ASTEROID_SPAWN_MAX = 4000; // 4 seconds
-const BULLET_COLOR = '#FFBF00';
-const STARTING_ASTEROIDS = 3;
-const INCREASE_ASTEROIDS_EVERY_N_HITS = 5;
-const STAR_SPAWN_MIN = 60000; // 60 seconds
-const STAR_SPAWN_MAX = 90000; // 90 seconds
-const SHIELD_SPAWN_MIN = 15000; // 30 seconds
-const SHIELD_SPAWN_MAX = 30000; // 60 seconds
-const SHIELD_DURATION = 8000; // 8 seconds
-const SHIELD_ROTATION_DURATION = 2500;
-const SHIELD_BLINK_DURATION = 2000; // 2 seconds blink warning
-const HIGH_SCORE_DEFAULT_COLOR = '#00ffcc';
-const HIGH_SCORE_BEATEN_COLOR = '#ff3366';
-
 const stars = [];
-const STAR_COUNT = 50;
 for (let i = 0; i < STAR_COUNT; i++) {
   stars.push({
     x: Math.random() * canvas.width,
