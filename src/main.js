@@ -126,9 +126,6 @@ const touchState = {
 };
 
 function handleTouchStart(e) {
-  const target = e.target;
-  if (target.closest('input') || target.closest('label')) return;
-
   e.preventDefault();
 
   const touches = e.touches;

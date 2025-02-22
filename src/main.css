@@ -115,7 +115,7 @@ body {
 }
 
 #startDialog {
-  z-index: 1;
+  z-index: 3;
   position: absolute;
   top: 50%;
   left: 50%;
@@ -230,90 +230,36 @@ body {
   position: absolute;
   align-items: center;
   justify-content: center;
-  width: 70px;
-  height: 70px;
+  width: 60px;
+  height: 60px;
   border: 2px solid #00ffcc;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.2);
   color: #00ffcc;
   font-size: 30px;
+  font-family: 'Orbitron', sans-serif;
   text-shadow: 0 0 5px rgba(0, 255, 204, 0.8);
   opacity: 0.7;
+  pointer-events: all;
   touch-action: none;
 }
 
 #leftButton {
-  bottom: 80px;
+  bottom: 30px;
   left: 20px;
 }
 
 #rightButton {
-  bottom: 80px;
-  left: 90px;
+  bottom: 30px;
+  left: 100px;
 }
 
 #thrustButton {
-  right: 90px;
-  bottom: 80px;
+  right: 100px;
+  bottom: 30px;
 }
 
 #shootButton {
   right: 20px;
-  bottom: 80px;
-}
-
-/* iOS Portrait */
-@media (hover: none) and (pointer: coarse) and (orientation: portrait) {
-  .touchButton {
-    width: 60px;
-    height: 60px;
-    font-size: 35px;
-  }
-
-  #leftButton {
-    bottom: 30px;
-    left: 20px;
-  }
-
-  #rightButton {
-    bottom: 30px;
-    left: 100px;
-  }
-
-  #thrustButton {
-    right: 100px;
-    bottom: 30px;
-  }
-
-  #shootButton {
-    right: 20px;
-    bottom: 30px;
-  }
-}
-
-/* Landscape mode */
-@media (hover: none) and (pointer: coarse) and (orientation: landscape) {
-  .touchButton {
-    width: 60px;
-    height: 60px;
-    font-size: 22px;
-  }
-
-  #leftButton {
-    bottom: 60px;
-  }
-
-  #rightButton {
-    bottom: 60px;
-    left: 100px;
-  }
-
-  #thrustButton {
-    right: 100px;
-    bottom: 60px;
-  }
-
-  #shootButton {
-    bottom: 60px;
-  }
+  bottom: 30px;
 }
