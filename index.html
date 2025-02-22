@@ -353,6 +353,12 @@
         const keys = {};
         window.addEventListener('keydown', (e) => {
             keys[e.key] = true;
+
+            // Add an asteroid when pressing backtick
+            if (e.key === '`' && gameStarted && !player.exploded) {
+                asteroids.push(new Asteroid());
+            }            
+
             if (!gameStarted) {
                 startGame();
             } else if (player.exploded && player.pieces.length === 0) {
