@@ -87,6 +87,10 @@ let fadeOutTime = 25;
 let cachedHighScore = parseInt(localStorage.getItem('highScore')) || 0;
 let hasCustomTexture = false;
 let textureImage = null;
+let isShaking = false;
+let shakeDuration = 500; // Duration in milliseconds
+let shakeIntensity = 10; // Maximum shake offset in pixels
+let shakeStartTime = 0;
 
 const stars = [];
 for (let i = 0; i < STAR_COUNT; i++) {
@@ -1177,6 +1181,7 @@ function update() {
                 const size = Math.random() * 5 + 2;
                 player.pieces.push(new ExplosionPiece(player.x, player.y, angle, size));
               }
+              shakeCanvas();
               // Clear all bullets when player explodes
               bullets = [];
             }
@@ -1226,6 +1231,7 @@ function update() {
             pendingAsteroids = [];
             flashActive = true;
             flashStartTime = Date.now();
+            shakeCanvas();
           }
           break;
         }
@@ -1312,6 +1318,23 @@ function formatTime(milliseconds) {
 }
 
 function draw() {
+  ctx.save(); // Save the context state before applying transformations
+
+  // Apply shake effect if active
+  if (isShaking) {
+    const elapsed = Date.now() - shakeStartTime;
+    if (elapsed < shakeDuration) {
+      // Calculate diminishing shake intensity
+      const progress = elapsed / shakeDuration;
+      const currentIntensity = shakeIntensity * (1 - progress);
+      const offsetX = (Math.random() - 0.5) * 2 * currentIntensity;
+      const offsetY = (Math.random() - 0.5) * 2 * currentIntensity;
+      ctx.translate(offsetX, offsetY);
+    } else {
+      isShaking = false;
+    }
+  }
+
   // Create a gradient for the background
   const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
   gradient.addColorStop(0, '#06000b'); // Dark blue at the top
@@ -1350,6 +1373,13 @@ function draw() {
     ctx.fillStyle = `rgba(255, 255, 0, ${flashOpacity})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
+
+  ctx.restore(); // Restore the context state after drawing
+}
+
+function shakeCanvas() {
+  isShaking = true;
+  shakeStartTime = Date.now();
 }
 
 function gameLoop() {
