@@ -53,14 +53,42 @@ body {
   text-shadow: 0 0 5px rgba(0, 255, 204, 0.8);
 }
 
-#timer {
+#highScore {
   z-index: 1;
   position: absolute;
   top: 20px;
   right: 20px;
   color: #00ffcc;
   font-weight: 700;
-  font-size: 24px;
+  font-size: 20px;
+  font-family: 'Orbitron', sans-serif;
+  text-shadow: 0 0 5px rgba(0, 255, 204, 0.8);
+
+  &.is-current {
+    color: #ff3366;
+    text-shadow: 0 0 5px rgba(255, 51, 102, 0.8);
+    animation: blink-new-score 3s ease-in-out infinite;
+  }
+}
+
+@keyframes blink-new-score {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+#timer {
+  z-index: 1;
+  position: absolute;
+  top: 50px;
+  right: 20px;
+  color: #00ffcc;
+  font-weight: 700;
+  font-size: 20px;
   font-family: 'Orbitron', sans-serif;
   text-shadow: 0 0 5px rgba(0, 255, 204, 0.8);
 }

@@ -19,5 +19,4 @@ npm start
 ## Ideas
 
 - add sound
-- maintain the high score and show it on the menu
 - coins to collect

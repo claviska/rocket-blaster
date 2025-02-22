@@ -5,6 +5,7 @@ const zeroGravityToggle = document.getElementById('zeroGravityToggle');
 const accuracyDisplay = document.getElementById('accuracy');
 const hitsDisplay = document.getElementById('hits');
 const timerDisplay = document.getElementById('timer');
+const highScoreDisplay = document.getElementById('highScore');
 const gameOverDisplay = document.getElementById('gameOver');
 const startDialog = document.getElementById('startDialog');
 const touchControls = document.getElementById('touchControls');
@@ -12,6 +13,7 @@ const leftButton = document.getElementById('leftButton');
 const rightButton = document.getElementById('rightButton');
 const thrustButton = document.getElementById('thrustButton');
 const shootButton = document.getElementById('shootButton');
+let cachedHighScore = parseInt(localStorage.getItem('highScore')) || 0;
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -80,6 +82,8 @@ const SHIELD_SPAWN_MAX = 30000; // 60 seconds
 const SHIELD_DURATION = 8000; // 8 seconds
 const SHIELD_ROTATION_DURATION = 2500;
 const SHIELD_BLINK_DURATION = 2000; // 2 seconds blink warning
+const HIGH_SCORE_DEFAULT_COLOR = '#00ffcc';
+const HIGH_SCORE_BEATEN_COLOR = '#ff3366';
 
 const stars = [];
 const STAR_COUNT = 50;
@@ -880,9 +884,27 @@ function restartGame() {
   pendingStarSpawnTime = Date.now() + Math.random() * (STAR_SPAWN_MAX - STAR_SPAWN_MIN) + STAR_SPAWN_MIN;
   pendingShieldSpawnTime = Date.now() + Math.random() * (SHIELD_SPAWN_MAX - SHIELD_SPAWN_MIN) + SHIELD_SPAWN_MIN;
 
+  // Reset high score display state
+  highScoreDisplay.classList.remove('is-current');
+
   // Keep the zero gravity setting when restarting
   const zeroGravityEnabled = zeroGravityToggle.checked;
   zeroGravityToggle.checked = zeroGravityEnabled;
+}
+
+function updateHighScore() {
+  if (score > cachedHighScore) {
+    cachedHighScore = score;
+    localStorage.setItem('highScore', score);
+    highScoreDisplay.textContent = `High Score: ${score}`;
+    highScoreDisplay.style.display = 'block';
+    highScoreDisplay.classList.add('is-current');
+  } else if (cachedHighScore > 0) {
+    highScoreDisplay.textContent = `High Score: ${cachedHighScore}`;
+    highScoreDisplay.style.display = 'block';
+  } else {
+    highScoreDisplay.style.display = 'none';
+  }
 }
 
 function update() {
@@ -906,6 +928,7 @@ function update() {
     player.pieces = player.pieces.filter(p => p.life > 0);
     if (player.pieces.length === 0) {
       gameOverDisplay.style.display = 'block';
+      updateHighScore();
     }
   } else {
     // Handle rotation with easing
@@ -1052,6 +1075,10 @@ function update() {
           score += 50;
           hits++;
           asteroidsDestroyed += 1;
+
+          if (score > cachedHighScore) {
+            updateHighScore();
+          }
 
           // Spawn a new asteroid soon
           const delay = Math.random() * (ASTEROID_SPAWN_MAX - ASTEROID_SPAWN_MIN) + ASTEROID_SPAWN_MIN;
@@ -1306,6 +1333,10 @@ window.addEventListener('keydown', () => {
 
 window.addEventListener('mousemove', () => {
   document.documentElement.classList.remove('is-using-keyboard');
+});
+
+window.addEventListener('load', () => {
+  updateHighScore();
 });
 
 gameLoop();
