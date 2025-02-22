@@ -26,11 +26,9 @@ npm start
   - sucks in asteroids and maybe the rocket with gravitational physics when too close
 - sounds
   - ability to turn on/off with icon at top right
-  - when the game starts:
+  - when the game first starts: ?
   - when you shoot (need to crop): https://audiojungle.net/item/space-gun/17362803
-  - when an asteroid explodes:
-  - when the rocket explodes:
-    - https://audiojungle.net/item/bomb-explode/13179252
-    - https://audiojungle.net/item/small-space-explosion/9432528
+  - when an asteroid explodes: ?
+  - when the rocket explodes: https://audiojungle.net/item/small-space-explosion/9432528
   - when you get the shield: https://audiojungle.net/item/8bit-powerup-11/32971129
-  - when you get the supernova: https://audiojungle.net/item/8bit-powerup-17/32971381
+  - when you get the supernova: ?
