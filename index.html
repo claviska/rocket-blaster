@@ -99,6 +99,35 @@
                 text-shadow: 0 0 8px rgb(214, 53, 215, 0.8);
             }
         }
+        
+        #zeroGravityToggle {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            vertical-align: middle;
+            cursor: pointer;
+            border: 2px solid #00FFCC;
+            border-radius: 3px;
+            background: transparent;
+            position: relative;
+            margin: 0 8px;
+            box-shadow: 0 0 8px #00FFCC;
+        }
+        #zeroGravityToggle:checked::after {
+            content: '';
+            position: absolute;
+            left: 5px;
+            top: -1px;
+            width: 7px;
+            height: 14px;
+            border: solid #00FFCC;
+            border-width: 0 3px 3px 0;
+            transform: rotate(45deg);
+        }
+        .gravity-label {
+            cursor: pointer;
+        }
         #touchControls {
             display: none; /* Hidden by default, shown on touch devices */
             position: absolute;
@@ -192,7 +221,8 @@
         <h1>Rocket Blaster</h1>
         <div class="subtitle">Destroy asteroids and earn points</div><br>
         Move: arrow Keys or touch<br>
-        Shoot: spacebar or touch<br><br>
+        Shoot: spacebar or touch<br>
+        <label class="gravity-label"><input type="checkbox" id="zeroGravityToggle"> Zero Gravity </label><br><br>
         Press any key or tap to start...
     </div>
     <div id="touchControls">
@@ -207,6 +237,7 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const scoreDisplay = document.getElementById('score');
+        const zeroGravityToggle = document.getElementById('zeroGravityToggle');
         const shotsFiredDisplay = document.getElementById('shotsFired');
         const hitsDisplay = document.getElementById('hits');
         const gameOverDisplay = document.getElementById('gameOver');
@@ -273,7 +304,7 @@
             '#A100A1'
         ];
         const ASTEROID_MIN_SIZE = 20;
-        const ASTEROID_MAX_SIZE = 40;        
+        const ASTEROID_MAX_SIZE = 45;        
         const BULLET_COLOR = '#FFBF00';
         const STAR_SPAWN_MIN = 25000; // 25 seconds
         const STAR_SPAWN_MAX = 50000; // 50 seconds
@@ -816,8 +847,6 @@
             player.velY = 0;
             player.exploded = false;
             player.pieces = [];
-            player.thrustFrame = 0;
-            player.isThrusting = false;
             bullets = [];
             asteroids = [new Asteroid(), new Asteroid()];
             powerUps = [];
@@ -830,6 +859,10 @@
             gameOverDisplay.style.display = 'none';
             gameStartTime = Date.now();
             pendingStarSpawnTime = Date.now() + Math.random() * (STAR_SPAWN_MAX - STAR_SPAWN_MIN) + STAR_SPAWN_MIN;
+            
+            // Keep the zero gravity setting when restarting
+            const zeroGravityEnabled = zeroGravityToggle.checked;
+            zeroGravityToggle.checked = zeroGravityEnabled;
         }
 
         function update() {
@@ -846,17 +879,46 @@
                     gameOverDisplay.style.display = 'block';
                 }
             } else {
-                // Combine keyboard and touch controls
+                // Handle rotation
                 if (keys['ArrowLeft'] || touchState.left) player.angle -= 0.1;
                 if (keys['ArrowRight'] || touchState.right) player.angle += 0.1;
 
-                if (keys['ArrowUp'] || touchState.thrust) {
-                    player.velX += Math.cos(player.angle) * player.acceleration;
-                    player.velY += Math.sin(player.angle) * player.acceleration;
-                }
-                if (keys['ArrowDown']) {
-                    player.velX -= Math.cos(player.angle) * player.acceleration;
-                    player.velY -= Math.sin(player.angle) * player.acceleration;
+                const isZeroGravity = zeroGravityToggle.checked;
+                const isThrusting = keys['ArrowUp'] || touchState.thrust;
+                const isReversing = keys['ArrowDown'];
+
+                if (isZeroGravity) {
+                    // Zero gravity mode
+                    if (isThrusting) {
+                        player.velX += Math.cos(player.angle) * player.acceleration;
+                        player.velY += Math.sin(player.angle) * player.acceleration;
+                    }
+                    if (isReversing) {
+                        player.velX -= Math.cos(player.angle) * player.acceleration;
+                        player.velY -= Math.sin(player.angle) * player.acceleration;
+                    }
+                } else {
+                    // Regular gravity mode - movement only when keys are pressed
+                    if (!isThrusting && !isReversing) {
+                        // Apply friction when not thrusting
+                        const frictionFactor = 0.98;
+                        player.velX *= frictionFactor;
+                        player.velY *= frictionFactor;
+                        
+                        // Stop completely if speed is very low
+                        if (Math.abs(player.velX) < 0.01) player.velX = 0;
+                        if (Math.abs(player.velY) < 0.01) player.velY = 0;
+                    } else {
+                        // Set velocity directly based on current angle and input
+                        const targetSpeed = isThrusting ? player.maxSpeed : (isReversing ? -player.maxSpeed : 0);
+                        const targetVelX = Math.cos(player.angle) * targetSpeed;
+                        const targetVelY = Math.sin(player.angle) * targetSpeed;
+                        
+                        // Ease into the target velocity
+                        const easeAmount = 0.1;
+                        player.velX += (targetVelX - player.velX) * easeAmount;
+                        player.velY += (targetVelY - player.velY) * easeAmount;
+                    }
                 }
 
                 const speed = Math.sqrt(player.velX * player.velX + player.velY * player.velY);
@@ -1089,6 +1151,17 @@
             draw();
             requestAnimationFrame(gameLoop);
         }
+
+        // Load zero gravity preference from localStorage
+        const savedGravityState = localStorage.getItem('zeroGravity');
+        if (savedGravityState !== null) {
+            zeroGravityToggle.checked = savedGravityState === 'true';
+        }
+
+        // Save zero gravity state when changed
+        zeroGravityToggle.addEventListener('change', () => {
+            localStorage.setItem('zeroGravity', zeroGravityToggle.checked);
+        });
 
         window.addEventListener('resize', () => {
             canvas.width = window.innerWidth;
