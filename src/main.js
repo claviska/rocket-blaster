@@ -12,7 +12,7 @@ const INCREASE_ASTEROIDS_EVERY_N_HITS = 5;
 const STAR_SPAWN_MIN = 60000; // 60 seconds
 const STAR_SPAWN_MAX = 90000; // 90 seconds
 const SHIELD_SPAWN_MIN = 30000; // 30 seconds
-const SHIELD_SPAWN_MAX = 5000; // 60 seconds
+const SHIELD_SPAWN_MAX = 60000; // 60 seconds
 const SHIELD_DURATION = 8000; // 8 seconds
 const SHIELD_ROTATION_DURATION = 2500;
 const SHIELD_BLINK_DURATION = 2000; // 2 seconds blink warning
@@ -944,7 +944,7 @@ function update() {
     }
   } else {
     // Handle rotation with easing
-    const maxRotationSpeed = 0.1;
+    const maxRotationSpeed = 0.075;
     const rotationEasing = 0.2;
 
     // Target rotation speed based on input
