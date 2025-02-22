@@ -3,6 +3,11 @@ canvas {
   height: 100dvh;
   margin: 0;
   background: black;
+
+  @media screen and (max-width: 767px) {
+    width: 200vw;
+    height: 200dvh;
+  }
 }
 
 html.is-using-keyboard {
@@ -112,6 +117,11 @@ body {
   small {
     font-size: 32px;
   }
+
+  @media screen and (max-width: 767px) {
+    top: 50dvh; /* Center relative to viewport height */
+    transform: translate(-50%, -50%);
+  }
 }
 
 #startDialog {
@@ -135,17 +145,18 @@ body {
   font-family: 'Orbitron', sans-serif;
   text-align: center;
   text-shadow: 0 0 8px rgba(0, 255, 204, 0.8);
-  text-wrap: balance;
 
   h1 {
     margin: 0;
     color: rgb(2, 183, 255);
     text-shadow: 0 0 8px rgb(2, 183, 255, 0.8);
+    text-wrap: balance;
   }
 
   .subtitle {
     color: rgb(214, 53, 215);
     text-shadow: 0 0 8px rgb(214, 53, 215, 0.8);
+    text-wrap: balance;
   }
 
   .author {
@@ -158,9 +169,10 @@ body {
     }
   }
 
-  /* Adjust sizes for mobile devices */
   @media screen and (max-width: 767px) {
+    top: 50dvh;
     padding: 15px;
+    transform: translate(-50%, -50%);
     font-size: 24px;
 
     h1 {
@@ -188,7 +200,6 @@ body {
   border-radius: 26px;
   background: transparent;
   box-shadow: 0 0 8px #00ffcc;
-  vertical-align: middle;
   cursor: pointer;
   transition: all 0.3s ease;
 }
@@ -219,7 +230,7 @@ body {
 }
 
 #zeroGravityToggle:active::after {
-  width: 26px; /* Slight squeeze effect when clicking */
+  width: 26px;
 }
 
 .gravity-label {
@@ -234,7 +245,6 @@ body {
   height: 100dvh;
 }
 
-/* Show touch controls on touch devices */
 @media (hover: none) and (pointer: coarse) {
   #touchControls {
     display: block;

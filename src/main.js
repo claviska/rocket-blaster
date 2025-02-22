@@ -35,9 +35,11 @@ const leftButton = document.getElementById('leftButton');
 const rightButton = document.getElementById('rightButton');
 const thrustButton = document.getElementById('thrustButton');
 const shootButton = document.getElementById('shootButton');
+let scaleFactor = window.innerWidth < 768 ? 0.5 : 1;
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+canvas.width = window.innerWidth / scaleFactor;
+canvas.height = window.innerHeight / scaleFactor;
+ctx.scale(scaleFactor, scaleFactor);
 
 const player = {
   x: canvas.width / 2,
@@ -1444,9 +1446,11 @@ zeroGravityToggle.addEventListener('change', () => {
 });
 
 window.addEventListener('resize', () => {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  player.x = canvas.width / 2;
+  scaleFactor = window.innerWidth < 768 ? 0.5 : 1;
+  canvas.width = window.innerWidth / scaleFactor;
+  canvas.height = window.innerHeight / scaleFactor;
+  ctx.scale(scaleFactor, scaleFactor); // Re-apply scale after resize
+  player.x = canvas.width / 2; // Reset player position
   player.y = canvas.height / 2;
   stars.forEach(star => {
     star.x = Math.random() * canvas.width;
