@@ -35,7 +35,6 @@ const leftButton = document.getElementById('leftButton');
 const rightButton = document.getElementById('rightButton');
 const thrustButton = document.getElementById('thrustButton');
 const shootButton = document.getElementById('shootButton');
-let cachedHighScore = parseInt(localStorage.getItem('highScore')) || 0;
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -85,6 +84,9 @@ let flashStartTime;
 let fadeInTime = 25;
 let fullOpacityTime = 25;
 let fadeOutTime = 25;
+let cachedHighScore = parseInt(localStorage.getItem('highScore')) || 0;
+let hasCustomTexture = false;
+let textureImage = null;
 
 const stars = [];
 for (let i = 0; i < STAR_COUNT; i++) {
@@ -124,6 +126,20 @@ const touchState = {
   thrust: false,
   shoot: false
 };
+
+// Check for texture mode in URL
+function checkForTextureMode() {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('texture')) {
+    hasCustomTexture = true;
+    textureImage = new Image();
+    textureImage.src = `/textures/${urlParams.get('texture')}.png`;
+    textureImage.onerror = err => {
+      console.log(err);
+      // window.location.href = window.location.pathname;
+    };
+  }
+}
 
 function handleTouchStart(e) {
   e.preventDefault();
@@ -216,6 +232,7 @@ class Asteroid {
   constructor() {
     const side = Math.floor(Math.random() * 4);
     let x, y, angle;
+
     switch (side) {
       case 0:
         x = Math.random() * canvas.width;
@@ -256,6 +273,7 @@ class Asteroid {
     this.explosionLife = 0;
     this.color = ASTEROID_COLORS[Math.floor(Math.random() * ASTEROID_COLORS.length)];
     this.points = [];
+
     const segments = 10;
     for (let i = 0; i < segments; i++) {
       const angle = (i / segments) * Math.PI * 2;
@@ -313,132 +331,137 @@ class Asteroid {
       this.pieces.forEach(p => p.draw());
       return;
     }
+
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rotationAngle);
     ctx.scale(this.scale, this.scale);
 
-    // Create base gradient
-    const gradient = ctx.createRadialGradient(this.size * 0.3, -this.size * 0.3, 0, 0, 0, this.size * 1.2);
-
-    const hexToRgb = hex => {
-      const r = parseInt(hex.slice(1, 3), 16);
-      const g = parseInt(hex.slice(3, 5), 16);
-      const b = parseInt(hex.slice(5, 7), 16);
-      return { r, g, b };
+    // Extracted curve drawing function
+    const drawAsteroidShape = () => {
+      ctx.beginPath();
+      ctx.moveTo(this.points[0].x, this.points[0].y);
+      for (let i = 1; i < this.points.length; i++) {
+        const prev = this.points[i - 1];
+        const curr = this.points[i];
+        const cp1x = prev.x + (curr.x - prev.x) * 0.3;
+        const cp1y = prev.y + (curr.y - prev.y) * 0.3;
+        const cp2x = curr.x - (curr.x - prev.x) * 0.3;
+        const cp2y = curr.y - (curr.y - prev.y) * 0.3;
+        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, curr.x, curr.y);
+      }
+      const last = this.points[this.points.length - 1];
+      const first = this.points[0];
+      const cp1x = last.x + (first.x - last.x) * 0.3;
+      const cp1y = last.y + (first.y - last.y) * 0.3;
+      const cp2x = first.x - (first.x - last.x) * 0.3;
+      const cp2y = first.y - (first.y - last.y) * 0.3;
+      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, first.x, first.y);
+      ctx.closePath();
     };
 
-    const baseColor = hexToRgb(this.color);
-
-    // Create more color variants for texture
-    const lighten = (color, amount) => ({
-      r: Math.min(255, color.r + amount),
-      g: Math.min(255, color.g + amount),
-      b: Math.min(255, color.b + amount)
+    // Extracted color utility functions
+    const hexToRgb = hex => ({
+      r: parseInt(hex.slice(1, 3), 16),
+      g: parseInt(hex.slice(3, 5), 16),
+      b: parseInt(hex.slice(5, 7), 16)
     });
 
-    const darken = (color, amount) => ({
-      r: Math.max(0, color.r - amount),
-      g: Math.max(0, color.g - amount),
-      b: Math.max(0, color.b - amount)
+    const adjustColor = (color, amount) => ({
+      r: Math.max(0, Math.min(255, color.r + amount)),
+      g: Math.max(0, Math.min(255, color.g + amount)),
+      b: Math.max(0, Math.min(255, color.b + amount))
     });
 
-    const highlightColor = lighten(baseColor, 80);
-    const lightColor = lighten(baseColor, 40);
-    const shadowColor = darken(baseColor, 60);
-    const deepShadowColor = darken(baseColor, 90);
+    if (hasCustomTexture && textureImage && textureImage.complete) {
+      ctx.save();
+      drawAsteroidShape();
+      ctx.clip();
+      const imgSize = this.size * 2.4;
+      ctx.drawImage(textureImage, -imgSize / 2, -imgSize / 2, imgSize, imgSize);
+      ctx.restore();
+    } else {
+      const baseColor = hexToRgb(this.color);
+      const gradient = ctx.createRadialGradient(this.size * 0.3, -this.size * 0.3, 0, 0, 0, this.size * 1.2);
 
-    // Create multi-step gradient for more depth
-    gradient.addColorStop(0, `rgb(${highlightColor.r}, ${highlightColor.g}, ${highlightColor.b})`);
-    gradient.addColorStop(0.3, `rgb(${lightColor.r}, ${lightColor.g}, ${lightColor.b})`);
-    gradient.addColorStop(0.6, `rgb(${baseColor.r}, ${baseColor.g}, ${baseColor.b})`);
-    gradient.addColorStop(0.8, `rgb(${shadowColor.r}, ${shadowColor.g}, ${shadowColor.b})`);
-    gradient.addColorStop(1, `rgb(${deepShadowColor.r}, ${deepShadowColor.g}, ${deepShadowColor.b})`);
-
-    // Draw base shape with smooth edges
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.moveTo(this.points[0].x, this.points[0].y);
-    for (let i = 1; i < this.points.length; i++) {
-      const cp1x = this.points[i - 1].x + (this.points[i].x - this.points[i - 1].x) * 0.3;
-      const cp1y = this.points[i - 1].y + (this.points[i].y - this.points[i - 1].y) * 0.3;
-      const cp2x = this.points[i].x - (this.points[i].x - this.points[i - 1].x) * 0.3;
-      const cp2y = this.points[i].y - (this.points[i].y - this.points[i - 1].y) * 0.3;
-      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, this.points[i].x, this.points[i].y);
-    }
-    // Connect back to the first point
-    const lastIndex = this.points.length - 1;
-    const cp1x = this.points[lastIndex].x + (this.points[0].x - this.points[lastIndex].x) * 0.3;
-    const cp1y = this.points[lastIndex].y + (this.points[0].y - this.points[lastIndex].y) * 0.3;
-    const cp2x = this.points[0].x - (this.points[0].x - this.points[lastIndex].x) * 0.3;
-    const cp2y = this.points[0].y - (this.points[0].y - this.points[lastIndex].y) * 0.3;
-    ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, this.points[0].x, this.points[0].y);
-    ctx.closePath();
-    ctx.fill();
-
-    // Generate and store craters if they don't exist
-    if (!this.craters) {
-      this.craters = [];
-      const numCraters = Math.floor(Math.random() * 3) + 2;
-      for (let i = 0; i < numCraters; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const distance = Math.random() * this.size * 0.6;
-        this.craters.push({
-          x: Math.cos(angle) * distance,
-          y: Math.sin(angle) * distance,
-          radius: Math.random() * (this.size * 0.25) + this.size * 0.1,
-          depth: Math.random() * 0.6 + 0.2,
-          rimWidth: Math.random() * 0.3 + 0.1,
-          rimLight: Math.random() * 0.4 + 0.3
-        });
-      }
-    }
-
-    // Draw enhanced craters
-    this.craters.forEach(crater => {
-      // Draw crater shadow
-      const craterGradient = ctx.createRadialGradient(crater.x, crater.y, 0, crater.x, crater.y, crater.radius);
-
-      craterGradient.addColorStop(
+      // Simplified gradient stops using color adjustment
+      gradient.addColorStop(
         0,
-        `rgba(${deepShadowColor.r}, ${deepShadowColor.g}, ${deepShadowColor.b}, ${crater.depth})`
+        `rgb(${adjustColor(baseColor, 80).r}, ${adjustColor(baseColor, 80).g}, ${adjustColor(baseColor, 80).b})`
       );
-      craterGradient.addColorStop(
-        0.7,
-        `rgba(${shadowColor.r}, ${shadowColor.g}, ${shadowColor.b}, ${crater.depth * 0.8})`
-      );
-      craterGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-
-      ctx.fillStyle = craterGradient;
-      ctx.beginPath();
-      ctx.arc(crater.x, crater.y, crater.radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Draw crater rim highlight
-      const rimGradient = ctx.createRadialGradient(
-        crater.x - crater.radius * 0.2,
-        crater.y - crater.radius * 0.2,
-        crater.radius * (1 - crater.rimWidth),
-        crater.x,
-        crater.y,
-        crater.radius * 1.1
-      );
-
-      rimGradient.addColorStop(
-        0,
-        `rgba(${highlightColor.r}, ${highlightColor.g}, ${highlightColor.b}, ${crater.rimLight})`
-      );
-      rimGradient.addColorStop(
+      gradient.addColorStop(
         0.3,
-        `rgba(${lightColor.r}, ${lightColor.g}, ${lightColor.b}, ${crater.rimLight * 0.7})`
+        `rgb(${adjustColor(baseColor, 40).r}, ${adjustColor(baseColor, 40).g}, ${adjustColor(baseColor, 40).b})`
       );
-      rimGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      gradient.addColorStop(0.6, `rgb(${baseColor.r}, ${baseColor.g}, ${baseColor.b})`);
+      gradient.addColorStop(
+        0.8,
+        `rgb(${adjustColor(baseColor, -60).r}, ${adjustColor(baseColor, -60).g}, ${adjustColor(baseColor, -60).b})`
+      );
+      gradient.addColorStop(
+        1,
+        `rgb(${adjustColor(baseColor, -90).r}, ${adjustColor(baseColor, -90).g}, ${adjustColor(baseColor, -90).b})`
+      );
 
-      ctx.fillStyle = rimGradient;
-      ctx.beginPath();
-      ctx.arc(crater.x, crater.y, crater.radius * 1.1, 0, Math.PI * 2);
+      ctx.fillStyle = gradient;
+      drawAsteroidShape();
       ctx.fill();
-    });
+
+      // Simplified crater generation and drawing
+      if (!this.craters) {
+        this.craters = Array(Math.floor(Math.random() * 3) + 2)
+          .fill()
+          .map(() => ({
+            x: Math.cos(Math.random() * Math.PI * 2) * this.size * 0.6,
+            y: Math.sin(Math.random() * Math.PI * 2) * this.size * 0.6,
+            radius: Math.random() * (this.size * 0.25) + this.size * 0.1,
+            depth: Math.random() * 0.6 + 0.2,
+            rimWidth: Math.random() * 0.3 + 0.1,
+            rimLight: Math.random() * 0.4 + 0.3
+          }));
+      }
+
+      this.craters.forEach(crater => {
+        // Crater shadow
+        const shadowGradient = ctx.createRadialGradient(crater.x, crater.y, 0, crater.x, crater.y, crater.radius);
+        const shadowColor = adjustColor(baseColor, -90);
+        const midShadow = adjustColor(baseColor, -60);
+        shadowGradient.addColorStop(0, `rgba(${shadowColor.r}, ${shadowColor.g}, ${shadowColor.b}, ${crater.depth})`);
+        shadowGradient.addColorStop(0.7, `rgba(${midShadow.r}, ${midShadow.g}, ${midShadow.b}, ${crater.depth * 0.8})`);
+        shadowGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+        ctx.fillStyle = shadowGradient;
+        ctx.beginPath();
+        ctx.arc(crater.x, crater.y, crater.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Crater rim
+        const rimGradient = ctx.createRadialGradient(
+          crater.x - crater.radius * 0.2,
+          crater.y - crater.radius * 0.2,
+          crater.radius * (1 - crater.rimWidth),
+          crater.x,
+          crater.y,
+          crater.radius * 1.1
+        );
+        const highlightColor = adjustColor(baseColor, 80);
+        const lightColor = adjustColor(baseColor, 40);
+        rimGradient.addColorStop(
+          0,
+          `rgba(${highlightColor.r}, ${highlightColor.g}, ${highlightColor.b}, ${crater.rimLight})`
+        );
+        rimGradient.addColorStop(
+          0.3,
+          `rgba(${lightColor.r}, ${lightColor.g}, ${lightColor.b}, ${crater.rimLight * 0.7})`
+        );
+        rimGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+        ctx.fillStyle = rimGradient;
+        ctx.beginPath();
+        ctx.arc(crater.x, crater.y, crater.radius * 1.1, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
 
     ctx.restore();
   }
@@ -1357,4 +1380,5 @@ window.addEventListener('load', () => {
   updateHighScore();
 });
 
+checkForTextureMode();
 gameLoop();
