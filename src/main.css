@@ -162,7 +162,7 @@ body {
   .author {
     margin-block-start: 30px;
     color: white;
-    font-size: 20px;
+    font-size: 22px;
 
     a {
       color: inherit;
@@ -184,7 +184,7 @@ body {
     }
 
     .author {
-      font-size: 14px;
+      font-size: 18px;
     }
   }
 }
