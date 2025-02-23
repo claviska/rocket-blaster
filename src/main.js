@@ -158,6 +158,13 @@ function checkForTextureMode() {
 function handleTouchStart(e) {
   e.preventDefault();
 
+  // Start the game if it hasn't started yet, regardless of where the tap occurs
+  if (!gameStarted) {
+    startGame();
+    return; // Exit early after starting the game
+  }
+
+  // Handle touch controls if the game has started
   const touches = e.touches;
   for (let i = 0; i < touches.length; i++) {
     const touch = touches[i];
@@ -168,9 +175,9 @@ function handleTouchStart(e) {
     if (isTouchingButton(x, y, thrustButton)) touchState.thrust = true;
     if (isTouchingButton(x, y, shootButton)) touchState.shoot = true;
   }
-  if (!gameStarted && touches.length > 0) {
-    startGame();
-  } else if (player.exploded && player.pieces.length === 0 && touches.length > 0) {
+
+  // Restart the game if the player has exploded and all pieces are gone
+  if (player.exploded && player.pieces.length === 0 && touches.length > 0) {
     restartGame();
   }
 }
@@ -1574,6 +1581,7 @@ soundToggle.addEventListener('click', toggleSound);
 soundToggle.addEventListener('touchstart', e => {
   e.preventDefault(); // Prevent default to avoid double triggering
   toggleSound();
+  unlockAudioContext(); // Explicitly unlock audio context on touch
 });
 
 // Unlock audio on first user interaction
