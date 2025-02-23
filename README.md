@@ -18,7 +18,6 @@ npm start
 
 ## Ideas
 
-- [ ] add sounds
 - [ ] ability to select ship color
 - [ ] black hole
   - appears for 10 seconds
