@@ -27,6 +27,7 @@ const zeroGravityToggle = document.getElementById('zeroGravityToggle');
 const accuracyDisplay = document.getElementById('accuracy');
 const hitsDisplay = document.getElementById('hits');
 const timerDisplay = document.getElementById('timer');
+const soundToggle = document.getElementById('soundToggle');
 const highScoreDisplay = document.getElementById('highScore');
 const gameOverDisplay = document.getElementById('gameOver');
 const startDialog = document.getElementById('startDialog');
@@ -35,6 +36,7 @@ const leftButton = document.getElementById('leftButton');
 const rightButton = document.getElementById('rightButton');
 const thrustButton = document.getElementById('thrustButton');
 const shootButton = document.getElementById('shootButton');
+const savedSoundState = localStorage.getItem('soundEnabled');
 let scaleFactor = window.innerWidth < 768 ? 0.5 : 1;
 
 canvas.width = window.innerWidth / scaleFactor;
@@ -97,6 +99,7 @@ let shakeIntensity = 10; // Maximum shake offset in pixels
 let shakeStartTime = 0;
 let isPaused = false;
 let pauseTime = 0;
+let isSoundEnabled = true;
 
 const stars = [];
 for (let i = 0; i < STAR_COUNT; i++) {
@@ -1494,6 +1497,8 @@ function preloadSounds() {
 
 // Play sound function
 function playSound(soundName) {
+  if (!isSoundEnabled) return; // Don't play if sound is disabled
+
   // Find an available audio instance or create a new one
   let audio = sounds[soundName].find(a => a.paused || a.ended);
   if (!audio) {
@@ -1502,6 +1507,15 @@ function playSound(soundName) {
   }
   audio.currentTime = 0;
   audio.play().catch(error => console.log(`Error playing ${soundName}:`, error));
+}
+
+function toggleSound() {
+  isSoundEnabled = !isSoundEnabled;
+  soundToggle.textContent = isSoundEnabled ? '🔊' : '🔇';
+  soundToggle.classList.toggle('muted');
+
+  // Save preference to localStorage
+  localStorage.setItem('soundEnabled', isSoundEnabled);
 }
 
 // Load zero gravity preference from localStorage
@@ -1541,6 +1555,8 @@ window.addEventListener('load', () => {
   updateHighScore();
 });
 
+soundToggle.addEventListener('click', toggleSound);
+
 // Pause + restart the game when visibility changes
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
@@ -1571,6 +1587,12 @@ document.addEventListener('visibilitychange', () => {
     });
   }
 });
+
+if (savedSoundState !== null) {
+  isSoundEnabled = savedSoundState === 'true';
+  soundToggle.textContent = isSoundEnabled ? '🔊' : '🔇';
+  soundToggle.classList.toggle('muted', !isSoundEnabled);
+}
 
 checkForTextureMode();
 preloadSounds();
