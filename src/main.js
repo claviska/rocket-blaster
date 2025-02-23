@@ -966,8 +966,8 @@ function drawPlayer() {
 
 async function startGame() {
   gameStarted = true;
-  await unlockAudioContext(); // Ensure audio is unlocked before playing
-  playSound('game-start'); // No delay needed with await
+  await unlockAudioContext();
+  playSound('game-start');
   startDialog.style.display = 'none';
   gameStartTime = Date.now();
   timerDisplay.textContent = '0:00';
@@ -1001,8 +1001,8 @@ function restartGame() {
   gameOverDisplay.style.display = 'none';
   gameStartTime = Date.now();
   timerDisplay.textContent = '0:00';
-  pendingStarSpawnTime = Date.now() + Math.random() * (STAR_SPAWN_MAX - STAR_SPAWN_MIN) + STAR_SPAWN_MIN;
-  pendingShieldSpawnTime = Date.now() + Math.random() * (SHIELD_SPAWN_MAX - SHIELD_SPAWN_MIN) + SHIELD_SPAWN_MIN;
+  pendingStarSpawnTime = Date.now() + STAR_SPAWN_MIN + Math.random() * (STAR_SPAWN_MAX - STAR_SPAWN_MIN);
+  pendingShieldSpawnTime = Date.now() + SHIELD_SPAWN_MIN + Math.random() * (SHIELD_SPAWN_MAX - SHIELD_SPAWN_MIN);
   playSound('game-start');
 
   // Reset high score display state
@@ -1320,10 +1320,10 @@ function update() {
   }
 
   const now = Date.now();
-  if (gameStarted && now >= pendingStarSpawnTime) {
-    powerUps.push(new Star());
+  if (gameStarted && now >= pendingShieldSpawnTime && now - gameStartTime >= SHIELD_SPAWN_MIN) {
+    powerUps.push(new Shield());
     playSound('power-up-spawn');
-    pendingStarSpawnTime = now + Math.random() * (STAR_SPAWN_MAX - STAR_SPAWN_MIN) + STAR_SPAWN_MIN;
+    pendingShieldSpawnTime = now + Math.random() * (SHIELD_SPAWN_MAX - SHIELD_SPAWN_MIN) + SHIELD_SPAWN_MIN;
   }
 
   if (gameStarted && now >= pendingShieldSpawnTime) {
