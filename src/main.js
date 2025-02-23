@@ -52,17 +52,17 @@ const player = {
   velY: 0,
   maxSpeed: 3,
   acceleration: 0.1,
-  bodyLength: 14,
-  bodyWidth: 14,
+  bodyLength: 12,
+  bodyWidth: 12,
   noseLength: 12,
-  finSize: 8,
+  hitRadius: 12,
+  finSize: 6,
   pulseScale: 1,
   pulseTimer: 0,
   shootScale: 1,
   shootTimer: 0,
   exploded: false,
   pieces: [],
-  hitRadius: 25,
   thrustFrame: 0,
   isThrusting: false,
   hasShield: false,
@@ -70,7 +70,7 @@ const player = {
   shieldAngle: 0,
   shieldVisible: true,
   lastShotTime: 0,
-  shootCooldown: 250 // min delay between shots
+  shootCooldown: 200 // min delay between shots
 };
 
 let bullets = [];
@@ -1065,7 +1065,7 @@ function update() {
     }
   } else {
     // Handle rotation with easing
-    const maxRotationSpeed = 0.075;
+    const maxRotationSpeed = 0.1;
     const rotationEasing = 0.2;
 
     // Target rotation speed based on input
