@@ -100,14 +100,14 @@ body {
 
 #soundToggle {
   display: flex;
-  z-index: 1;
+  z-index: 10;
   position: absolute;
   top: 80px;
   right: 20px;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
   color: #00ffcc;
   font-size: 24px;
   font-family: 'Orbitron', sans-serif;
