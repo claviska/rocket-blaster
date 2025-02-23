@@ -465,7 +465,7 @@ class Asteroid {
       ctx.clip();
 
       this.craters.forEach(crater => {
-        // Crater shadow (less dark)
+        // Crater shadow
         const shadowGradient = ctx.createRadialGradient(
           crater.x + crater.radius * 0.2, // Slight offset for light source
           crater.y - crater.radius * 0.2,
@@ -474,14 +474,18 @@ class Asteroid {
           crater.y,
           crater.radius * 1.2
         );
-        const deepShadow = adjustColor(baseColor, -110); // Lightened from -140
-        const midShadow = adjustColor(baseColor, -100); // Unchanged
+
+        // Introduce variation in darkness
+        const darknessVariation = Math.random() * 20 - 10; // Random adjustment between -10 and +10
+        const deepShadow = adjustColor(baseColor, -70 + darknessVariation); // Lightened from -110, with variation
+        const midShadow = adjustColor(baseColor, -50 + darknessVariation); // Lightened from -100, with variation
+
         shadowGradient.addColorStop(
           0,
-          `rgba(${deepShadow.r}, ${deepShadow.g}, ${deepShadow.b}, ${crater.depth * 1.3})`
+          `rgba(${deepShadow.r}, ${deepShadow.g}, ${deepShadow.b}, ${crater.depth * 1.1})`
         );
-        shadowGradient.addColorStop(0.6, `rgba(${midShadow.r}, ${midShadow.g}, ${midShadow.b}, ${crater.depth * 1.0})`);
-        shadowGradient.addColorStop(1, `rgba(${midShadow.r}, ${midShadow.g}, ${midShadow.b}, 0)`); // Fade to darker tone
+        shadowGradient.addColorStop(0.6, `rgba(${midShadow.r}, ${midShadow.g}, ${midShadow.b}, ${crater.depth * 0.8})`);
+        shadowGradient.addColorStop(1, `rgba(${midShadow.r}, ${midShadow.g}, ${midShadow.b}, 0)`);
 
         ctx.fillStyle = shadowGradient;
         ctx.beginPath();
