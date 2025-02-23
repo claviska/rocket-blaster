@@ -1477,14 +1477,14 @@ const sounds = {
 };
 
 const soundFiles = {
-  'asteroid-explode': 'sounds/asteroid-explode.wav',
-  'asteroid-spawn': 'sounds/asteroid-spawn.wav',
-  'game-over': 'sounds/game-over.wav',
-  'game-start': 'sounds/game-start.wav',
-  'power-up-spawn': 'sounds/power-up-spawn.wav',
-  'power-up': 'sounds/power-up.wav',
-  shoot: 'sounds/shoot.wav',
-  supernova: 'sounds/supernova.wav'
+  'asteroid-explode': 'sounds/asteroid-explode.mp3',
+  'asteroid-spawn': 'sounds/asteroid-spawn.mp3',
+  'game-over': 'sounds/game-over.mp3',
+  'game-start': 'sounds/game-start.mp3',
+  'power-up-spawn': 'sounds/power-up-spawn.mp3',
+  'power-up': 'sounds/power-up.mp3',
+  shoot: 'sounds/shoot.mp3',
+  supernova: 'sounds/supernova.mp3'
 };
 
 function preloadSounds() {
