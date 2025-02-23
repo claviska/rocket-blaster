@@ -19,6 +19,7 @@ const SHIELD_BLINK_DURATION = 2000; // 2 seconds blink warning
 const HIGH_SCORE_DEFAULT_COLOR = '#00ffcc';
 const HIGH_SCORE_BEATEN_COLOR = '#ff3366';
 const STAR_COUNT = 50;
+const SOUND_POOL_SIZE = 10;
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -1486,26 +1487,39 @@ const soundFiles = {
   supernova: 'sounds/supernova.wav'
 };
 
-// Preload sounds
 function preloadSounds() {
   Object.keys(soundFiles).forEach(key => {
-    const audio = new Audio(soundFiles[key]);
-    audio.preload = 'auto';
-    sounds[key].push(audio);
+    // Create multiple instances for the pool
+    for (let i = 0; i < SOUND_POOL_SIZE; i++) {
+      const audio = new Audio(soundFiles[key]);
+      audio.preload = 'auto';
+      // Force loading by adding to the DOM temporarily (optional, helps some browsers)
+      audio.load();
+      audio.oncanplaythrough = () => {
+        // Ensure the sound is fully loaded into memory
+        audio.oncanplaythrough = null; // Remove listener after loading
+      };
+      audio.onerror = () => console.error(`Failed to load ${key} sound`);
+      sounds[key].push(audio);
+    }
   });
 }
 
 // Play sound function
 function playSound(soundName) {
-  if (!isSoundEnabled) return; // Don't play if sound is disabled
+  if (!isSoundEnabled) return;
 
-  // Find an available audio instance or create a new one
+  // Find a ready-to-play audio instance
   let audio = sounds[soundName].find(a => a.paused || a.ended);
   if (!audio) {
+    // If no available instance, create a new one (fallback)
     audio = new Audio(soundFiles[soundName]);
+    audio.preload = 'auto';
+    audio.load();
     sounds[soundName].push(audio);
   }
-  audio.currentTime = 0;
+
+  // Play the sound without resetting currentTime (it's either new or already ended)
   audio.play().catch(error => console.log(`Error playing ${soundName}:`, error));
 }
 
@@ -1552,6 +1566,7 @@ window.addEventListener('mousemove', () => {
 });
 
 window.addEventListener('load', () => {
+  preloadSounds();
   updateHighScore();
 });
 
@@ -1595,5 +1610,4 @@ if (savedSoundState !== null) {
 }
 
 checkForTextureMode();
-preloadSounds();
 gameLoop();
