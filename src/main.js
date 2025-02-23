@@ -957,9 +957,10 @@ function drawPlayer() {
   ctx.restore();
 }
 
-function startGame() {
+async function startGame() {
   gameStarted = true;
-  playSound('game-start');
+  await unlockAudioContext(); // Ensure audio is unlocked before playing
+  playSound('game-start'); // No delay needed with await
   startDialog.style.display = 'none';
   gameStartTime = Date.now();
   timerDisplay.textContent = '0:00';
@@ -1464,72 +1465,70 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
-// Sound management
-const sounds = {
-  'asteroid-explode': [],
-  'asteroid-spawn': [],
-  'game-over': [],
-  'game-start': [],
-  'power-up-spawn': [],
-  'power-up': [],
-  shoot: [],
-  supernova: []
-};
+// Sound management with Web Audio API
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+let isAudioUnlocked = false;
+const soundBuffers = {};
 
-const soundFiles = {
-  'asteroid-explode': 'sounds/asteroid-explode.mp3',
-  'asteroid-spawn': 'sounds/asteroid-spawn.mp3',
-  'game-over': 'sounds/game-over.mp3',
-  'game-start': 'sounds/game-start.mp3',
-  'power-up-spawn': 'sounds/power-up-spawn.mp3',
-  'power-up': 'sounds/power-up.mp3',
-  shoot: 'sounds/shoot.mp3',
-  supernova: 'sounds/supernova.mp3'
-};
+async function preloadSounds() {
+  const soundFiles = {
+    'asteroid-explode': 'sounds/asteroid-explode.mp3',
+    'asteroid-spawn': 'sounds/asteroid-spawn.mp3',
+    'game-over': 'sounds/game-over.mp3',
+    'game-start': 'sounds/game-start.mp3',
+    'power-up-spawn': 'sounds/power-up-spawn.mp3',
+    'power-up': 'sounds/power-up.mp3',
+    shoot: 'sounds/shoot.mp3',
+    supernova: 'sounds/supernova.mp3'
+  };
 
-function preloadSounds() {
-  Object.keys(soundFiles).forEach(key => {
-    // Create multiple instances for the pool
-    for (let i = 0; i < SOUND_POOL_SIZE; i++) {
-      const audio = new Audio(soundFiles[key]);
-      audio.preload = 'auto';
-      // Force loading by adding to the DOM temporarily (optional, helps some browsers)
-      audio.load();
-      audio.oncanplaythrough = () => {
-        // Ensure the sound is fully loaded into memory
-        audio.oncanplaythrough = null; // Remove listener after loading
-      };
-      audio.onerror = () => console.error(`Failed to load ${key} sound`);
-      sounds[key].push(audio);
+  for (const [key, url] of Object.entries(soundFiles)) {
+    try {
+      const response = await fetch(url);
+      const arrayBuffer = await response.arrayBuffer();
+      soundBuffers[key] = await audioContext.decodeAudioData(arrayBuffer);
+    } catch (error) {
+      console.error(`Failed to load sound ${key}:`, error);
     }
-  });
+  }
 }
 
-// Play sound function
-function playSound(soundName) {
-  if (!isSoundEnabled) return;
+async function unlockAudioContext() {
+  if (audioContext.state === 'suspended' || !isAudioUnlocked) {
+    try {
+      await audioContext.resume();
+      isAudioUnlocked = true;
+      console.log('AudioContext unlocked');
+      // Preload sounds after unlocking if not already loaded
+      if (Object.keys(soundBuffers).length === 0) {
+        await preloadSounds();
+      }
+    } catch (err) {
+      console.error('Failed to unlock AudioContext:', err);
+    }
+  }
+}
 
-  // Find a ready-to-play audio instance
-  let audio = sounds[soundName].find(a => a.paused || a.ended);
-  if (!audio) {
-    // If no available instance, create a new one (fallback)
-    audio = new Audio(soundFiles[soundName]);
-    audio.preload = 'auto';
-    audio.load();
-    sounds[soundName].push(audio);
+async function playSound(soundName) {
+  if (!isSoundEnabled || !soundBuffers[soundName]) return;
+
+  if (!isAudioUnlocked) {
+    await unlockAudioContext();
   }
 
-  // Play the sound without resetting currentTime (it's either new or already ended)
-  audio.play().catch(error => console.log(`Error playing ${soundName}:`, error));
+  const source = audioContext.createBufferSource();
+  source.buffer = soundBuffers[soundName];
+  source.connect(audioContext.destination);
+  source.start(0);
+  source.onended = () => source.disconnect();
 }
 
 function toggleSound() {
   isSoundEnabled = !isSoundEnabled;
   soundToggle.textContent = isSoundEnabled ? '🔊' : '🔇';
   soundToggle.classList.toggle('muted');
-
-  // Save preference to localStorage
   localStorage.setItem('soundEnabled', isSoundEnabled);
+  unlockAudioContext();
 }
 
 // Load zero gravity preference from localStorage
@@ -1567,10 +1566,31 @@ window.addEventListener('mousemove', () => {
 
 window.addEventListener('load', () => {
   preloadSounds();
+  unlockAudioContext();
   updateHighScore();
 });
 
 soundToggle.addEventListener('click', toggleSound);
+soundToggle.addEventListener('touchstart', e => {
+  e.preventDefault(); // Prevent default to avoid double triggering
+  toggleSound();
+});
+
+// Unlock audio on first user interaction
+window.addEventListener(
+  'touchstart',
+  () => {
+    unlockAudioContext();
+  },
+  { once: true }
+);
+window.addEventListener(
+  'click',
+  () => {
+    unlockAudioContext();
+  },
+  { once: true }
+);
 
 // Pause + restart the game when visibility changes
 document.addEventListener('visibilitychange', () => {
