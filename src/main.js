@@ -93,6 +93,8 @@ let isShaking = false;
 let shakeDuration = 500; // Duration in milliseconds
 let shakeIntensity = 10; // Maximum shake offset in pixels
 let shakeStartTime = 0;
+let isPaused = false;
+let pauseTime = 0;
 
 const stars = [];
 for (let i = 0; i < STAR_COUNT; i++) {
@@ -1429,8 +1431,10 @@ function shakeCanvas() {
 }
 
 function gameLoop() {
-  update();
-  draw();
+  if (!isPaused) {
+    update();
+    draw();
+  }
   requestAnimationFrame(gameLoop);
 }
 
@@ -1469,6 +1473,37 @@ window.addEventListener('mousemove', () => {
 
 window.addEventListener('load', () => {
   updateHighScore();
+});
+
+// Pause + restart the game when visibility changes
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    isPaused = true;
+    pauseTime = Date.now();
+  } else if (isPaused) {
+    isPaused = false;
+    const pauseDuration = Date.now() - pauseTime;
+
+    // Adjust all timers
+    gameStartTime += pauseDuration;
+    pendingStarSpawnTime += pauseDuration;
+    pendingShieldSpawnTime += pauseDuration;
+    if (player.hasShield) player.shieldStartTime += pauseDuration;
+    if (flashActive) flashStartTime += pauseDuration;
+    if (isShaking) shakeStartTime += pauseDuration;
+
+    pendingAsteroids = pendingAsteroids.map(pending => ({
+      ...pending,
+      spawnTime: pending.spawnTime + pauseDuration
+    }));
+
+    asteroids.forEach(a => {
+      a.spawnTime += pauseDuration;
+    });
+    powerUps.forEach(p => {
+      p.spawnTime += pauseDuration;
+    });
+  }
 });
 
 checkForTextureMode();
