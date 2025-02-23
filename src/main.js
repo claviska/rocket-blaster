@@ -11,8 +11,8 @@ const STARTING_ASTEROIDS = 3;
 const INCREASE_ASTEROIDS_EVERY_N_HITS = 5;
 const STAR_SPAWN_MIN = 40000; // 40 seconds
 const STAR_SPAWN_MAX = 70000; // 70 seconds
-const SHIELD_SPAWN_MIN = 20000; // 20 seconds
-const SHIELD_SPAWN_MAX = 50000; // 50 seconds
+const SHIELD_SPAWN_MIN = 2000; // 20 seconds
+const SHIELD_SPAWN_MAX = 5000; // 50 seconds
 const SHIELD_DURATION = 8000; // 8 seconds
 const SHIELD_ROTATION_DURATION = 2500;
 const SHIELD_BLINK_DURATION = 2000; // 2 seconds blink warning
@@ -55,7 +55,7 @@ const player = {
   bodyLength: 12,
   bodyWidth: 12,
   noseLength: 12,
-  hitRadius: 12,
+  hitRadius: 20,
   finSize: 6,
   pulseScale: 1,
   pulseTimer: 0,
@@ -149,8 +149,7 @@ function checkForTextureMode() {
     textureImage = new Image();
     textureImage.src = `/textures/${urlParams.get('texture')}.png`;
     textureImage.onerror = err => {
-      console.log(err);
-      // window.location.href = window.location.pathname;
+      console.error(err);
     };
   }
 }
@@ -892,7 +891,7 @@ function drawPlayer() {
       ctx.translate(player.x, player.y);
       ctx.rotate(player.shieldAngle);
       ctx.beginPath();
-      ctx.arc(0, 0, player.hitRadius * 1.5, 0, Math.PI * 2);
+      ctx.arc(0, 0, player.hitRadius * 1.5, 0, Math.PI * 2); // Current size
       ctx.strokeStyle = 'white';
       ctx.setLineDash([12, 12]);
       ctx.lineWidth = 2;
@@ -1191,13 +1190,14 @@ function update() {
       return b.x >= 0 && b.x <= canvas.width && b.y >= 0 && b.y <= canvas.height;
     });
 
+    const collisionFactor = 0.8; // Bullets must get 20% closer to trigger explosion
     for (let i = asteroids.length - 1; i >= 0; i--) {
       if (asteroids[i].exploded) continue;
       for (let j = bullets.length - 1; j >= 0; j--) {
         const dx = asteroids[i].x - bullets[j].x;
         const dy = asteroids[i].y - bullets[j].y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance < asteroids[i].hitRadius + bullets[j].size) {
+        if (distance < (asteroids[i].hitRadius + bullets[j].size) * collisionFactor) {
           const asteroidPieces = [];
           for (let k = 0; k < 8; k++) {
             const angle = Math.random() * Math.PI * 2;
@@ -1219,7 +1219,6 @@ function update() {
             updateHighScore();
           }
 
-          // Spawn a new asteroid soon
           const delay = Math.random() * (ASTEROID_SPAWN_MAX - ASTEROID_SPAWN_MIN) + ASTEROID_SPAWN_MIN;
           pendingAsteroids.push({ spawnTime: Date.now() + delay });
 
@@ -1688,9 +1687,9 @@ window.addEventListener(
   { once: true }
 );
 
-startDialog.addEventListener('click', async e => {
+document.addEventListener('click', async e => {
+  // Avoid triggering on gravity toggle
   if (!e.target.closest('.gravity-label')) {
-    // Avoid triggering on gravity toggle
     await startGame();
   }
 });
