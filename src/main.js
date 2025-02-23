@@ -9,10 +9,10 @@ const ASTEROID_SPAWN_MAX = 4000; // 4 seconds
 const BULLET_COLOR = '#FFBF00';
 const STARTING_ASTEROIDS = 3;
 const INCREASE_ASTEROIDS_EVERY_N_HITS = 5;
-const STAR_SPAWN_MIN = 60000; // 60 seconds
-const STAR_SPAWN_MAX = 90000; // 90 seconds
-const SHIELD_SPAWN_MIN = 30000; // 30 seconds
-const SHIELD_SPAWN_MAX = 60000; // 60 seconds
+const STAR_SPAWN_MIN = 40000; // 40 seconds
+const STAR_SPAWN_MAX = 70000; // 70 seconds
+const SHIELD_SPAWN_MIN = 20000; // 20 seconds
+const SHIELD_SPAWN_MAX = 50000; // 50 seconds
 const SHIELD_DURATION = 8000; // 8 seconds
 const SHIELD_ROTATION_DURATION = 2500;
 const SHIELD_BLINK_DURATION = 2000; // 2 seconds blink warning
@@ -65,7 +65,9 @@ const player = {
   hasShield: false,
   shieldStartTime: 0,
   shieldAngle: 0,
-  shieldVisible: true
+  shieldVisible: true,
+  lastShotTime: 0,
+  shootCooldown: 250 // min delay between shots
 };
 
 let bullets = [];
@@ -419,6 +421,7 @@ class Asteroid {
       if (!this.craters) {
         const craterCount = Math.floor(Math.random() * 3) + 5; // 5-7 craters
         this.craters = [];
+        playSound('asteroid-spawn');
         const minDistance = this.size * 0.3; // Minimum distance between craters
 
         // Function to check if a point is too close to existing craters
@@ -948,6 +951,7 @@ function drawPlayer() {
 
 function startGame() {
   gameStarted = true;
+  playSound('game-start');
   startDialog.style.display = 'none';
   gameStartTime = Date.now();
   timerDisplay.textContent = '0:00';
@@ -983,6 +987,7 @@ function restartGame() {
   timerDisplay.textContent = '0:00';
   pendingStarSpawnTime = Date.now() + Math.random() * (STAR_SPAWN_MAX - STAR_SPAWN_MIN) + STAR_SPAWN_MIN;
   pendingShieldSpawnTime = Date.now() + Math.random() * (SHIELD_SPAWN_MAX - SHIELD_SPAWN_MIN) + SHIELD_SPAWN_MIN;
+  playSound('game-start');
 
   // Reset high score display state
   highScoreDisplay.classList.remove('is-current');
@@ -1126,15 +1131,20 @@ function update() {
       keys['ArrowRight'] ||
       touchState.right;
 
-    if (keys[' '] || touchState.shoot) {
-      const noseX = player.x + Math.cos(player.angle) * (player.bodyLength + player.noseLength);
-      const noseY = player.y + Math.sin(player.angle) * (player.bodyLength + player.noseLength);
-      bullets.push(new Bullet(noseX, noseY, player.angle));
-      shotsFired++;
-      keys[' '] = false; // Reset key state
-      touchState.shoot = false; // Reset touch state
-      player.shootScale = 1.15;
-      player.shootTimer = 10;
+    if ((keys[' '] || touchState.shoot) && !player.exploded) {
+      const currentTime = Date.now();
+      if (currentTime - player.lastShotTime >= player.shootCooldown) {
+        const noseX = player.x + Math.cos(player.angle) * (player.bodyLength + player.noseLength);
+        const noseY = player.y + Math.sin(player.angle) * (player.bodyLength + player.noseLength);
+        bullets.push(new Bullet(noseX, noseY, player.angle));
+        playSound('shoot');
+        shotsFired++;
+        player.lastShotTime = currentTime; // Update last shot time
+        keys[' '] = false; // Reset key state
+        touchState.shoot = false; // Reset touch state
+        player.shootScale = 1.15;
+        player.shootTimer = 10;
+      }
     }
 
     if (player.pulseTimer > 0) {
@@ -1170,6 +1180,7 @@ function update() {
           asteroids[i].exploded = true;
           asteroids[i].pieces = asteroidPieces;
           asteroids[i].explosionLife = 30;
+          playSound('asteroid-explode');
 
           bullets.splice(j, 1);
           score += 50;
@@ -1210,6 +1221,7 @@ function update() {
                 asteroids[i].pieces.push(new ExplosionPiece(asteroids[i].x, asteroids[i].y, angle, size));
               }
               asteroids[i].explosionLife = 30;
+              playSound('asteroid-explode');
               score += 50;
               hits++;
 
@@ -1224,6 +1236,7 @@ function update() {
             } else {
               // Explosion code
               player.exploded = true;
+              playSound('game-over');
               for (let j = 0; j < 20; j++) {
                 const angle = Math.random() * Math.PI * 2;
                 const size = Math.random() * 5 + 2;
@@ -1251,6 +1264,7 @@ function update() {
             player.hasShield = true;
             player.shieldStartTime = Date.now();
             player.shieldVisible = true;
+            playSound('power-up');
             powerUps.splice(i, 1);
             score += 100;
           } else if (p instanceof Star) {
@@ -1277,6 +1291,8 @@ function update() {
               asteroids.push(new Asteroid());
             }
             pendingAsteroids = [];
+            playSound('power-up');
+            playSound('supernova');
             flashActive = true;
             flashStartTime = Date.now();
             shakeCanvas();
@@ -1290,11 +1306,13 @@ function update() {
   const now = Date.now();
   if (gameStarted && now >= pendingStarSpawnTime) {
     powerUps.push(new Star());
+    playSound('power-up-spawn');
     pendingStarSpawnTime = now + Math.random() * (STAR_SPAWN_MAX - STAR_SPAWN_MIN) + STAR_SPAWN_MIN;
   }
 
   if (gameStarted && now >= pendingShieldSpawnTime) {
     powerUps.push(new Shield());
+    playSound('power-up-spawn');
     pendingShieldSpawnTime = now + Math.random() * (SHIELD_SPAWN_MAX - SHIELD_SPAWN_MIN) + SHIELD_SPAWN_MIN;
   }
 
@@ -1438,6 +1456,50 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
+// Sound management
+const sounds = {
+  'asteroid-explode': [],
+  'asteroid-spawn': [],
+  'game-over': [],
+  'game-start': [],
+  'power-up-spawn': [],
+  'power-up': [],
+  shoot: [],
+  supernova: []
+};
+
+const soundFiles = {
+  'asteroid-explode': 'sounds/asteroid-explode.wav',
+  'asteroid-spawn': 'sounds/asteroid-spawn.wav',
+  'game-over': 'sounds/game-over.wav',
+  'game-start': 'sounds/game-start.wav',
+  'power-up-spawn': 'sounds/power-up-spawn.wav',
+  'power-up': 'sounds/power-up.wav',
+  shoot: 'sounds/shoot.wav',
+  supernova: 'sounds/supernova.wav'
+};
+
+// Preload sounds
+function preloadSounds() {
+  Object.keys(soundFiles).forEach(key => {
+    const audio = new Audio(soundFiles[key]);
+    audio.preload = 'auto';
+    sounds[key].push(audio);
+  });
+}
+
+// Play sound function
+function playSound(soundName) {
+  // Find an available audio instance or create a new one
+  let audio = sounds[soundName].find(a => a.paused || a.ended);
+  if (!audio) {
+    audio = new Audio(soundFiles[soundName]);
+    sounds[soundName].push(audio);
+  }
+  audio.currentTime = 0;
+  audio.play().catch(error => console.log(`Error playing ${soundName}:`, error));
+}
+
 // Load zero gravity preference from localStorage
 const savedGravityState = localStorage.getItem('zeroGravity');
 if (savedGravityState !== null) {
@@ -1507,4 +1569,5 @@ document.addEventListener('visibilitychange', () => {
 });
 
 checkForTextureMode();
+preloadSounds();
 gameLoop();
