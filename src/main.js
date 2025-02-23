@@ -1473,37 +1473,23 @@ function gameLoop() {
 }
 
 // Sound management with Web Audio API
-const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+let audioContext = null;
 let isAudioUnlocked = false;
 const soundBuffers = {};
 
-async function preloadSounds() {
-  const soundFiles = {
-    'asteroid-explode': 'sounds/asteroid-explode.mp3',
-    'asteroid-spawn': 'sounds/asteroid-spawn.mp3',
-    'game-over': 'sounds/game-over.mp3',
-    'game-start': 'sounds/game-start.mp3',
-    'power-up-spawn': 'sounds/power-up-spawn.mp3',
-    'power-up': 'sounds/power-up.mp3',
-    shoot: 'sounds/shoot.mp3',
-    supernova: 'sounds/supernova.mp3'
-  };
-
-  for (const [key, url] of Object.entries(soundFiles)) {
-    try {
-      const response = await fetch(url);
-      const arrayBuffer = await response.arrayBuffer();
-      soundBuffers[key] = await audioContext.decodeAudioData(arrayBuffer);
-    } catch (error) {
-      console.error(`Failed to load sound ${key}:`, error);
-    }
+function initAudioContext() {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
   }
+  return audioContext;
 }
 
 async function unlockAudioContext() {
-  if (audioContext.state === 'suspended' || !isAudioUnlocked) {
+  const ctx = initAudioContext();
+
+  if (ctx.state === 'suspended' || !isAudioUnlocked) {
     try {
-      await audioContext.resume();
+      await ctx.resume();
       isAudioUnlocked = true;
       console.log('AudioContext unlocked');
       // Preload sounds after unlocking if not already loaded
@@ -1519,15 +1505,43 @@ async function unlockAudioContext() {
 async function playSound(soundName) {
   if (!isSoundEnabled || !soundBuffers[soundName]) return;
 
+  const ctx = initAudioContext();
+
   if (!isAudioUnlocked) {
     await unlockAudioContext();
   }
 
-  const source = audioContext.createBufferSource();
+  const source = ctx.createBufferSource();
   source.buffer = soundBuffers[soundName];
-  source.connect(audioContext.destination);
+  source.connect(ctx.destination);
   source.start(0);
   source.onended = () => source.disconnect();
+}
+
+// Update the preloadSounds function to use the lazy-loaded context
+async function preloadSounds() {
+  const ctx = initAudioContext();
+
+  const soundFiles = {
+    'asteroid-explode': 'sounds/asteroid-explode.mp3',
+    'asteroid-spawn': 'sounds/asteroid-spawn.mp3',
+    'game-over': 'sounds/game-over.mp3',
+    'game-start': 'sounds/game-start.mp3',
+    'power-up-spawn': 'sounds/power-up-spawn.mp3',
+    'power-up': 'sounds/power-up.mp3',
+    shoot: 'sounds/shoot.mp3',
+    supernova: 'sounds/supernova.mp3'
+  };
+
+  for (const [key, url] of Object.entries(soundFiles)) {
+    try {
+      const response = await fetch(url);
+      const arrayBuffer = await response.arrayBuffer();
+      soundBuffers[key] = await ctx.decodeAudioData(arrayBuffer);
+    } catch (error) {
+      console.error(`Failed to load sound ${key}:`, error);
+    }
+  }
 }
 
 function toggleSound() {
@@ -1535,9 +1549,11 @@ function toggleSound() {
   soundToggle.textContent = isSoundEnabled ? '🔊' : '🔇';
   soundToggle.classList.toggle('muted');
   localStorage.setItem('soundEnabled', isSoundEnabled);
-  unlockAudioContext();
-}
 
+  if (isSoundEnabled) {
+    unlockAudioContext();
+  }
+}
 // Load zero gravity preference from localStorage
 const savedGravityState = localStorage.getItem('zeroGravity');
 if (savedGravityState !== null) {
@@ -1572,16 +1588,17 @@ window.addEventListener('mousemove', () => {
 });
 
 window.addEventListener('load', () => {
-  preloadSounds();
-  unlockAudioContext();
   updateHighScore();
 });
 
-soundToggle.addEventListener('click', toggleSound);
-soundToggle.addEventListener('touchstart', e => {
-  e.preventDefault(); // Prevent default to avoid double triggering
-  toggleSound();
-  unlockAudioContext(); // Explicitly unlock audio context on touch
+['click', 'touchstart', 'keydown'].forEach(eventName => {
+  window.addEventListener(
+    eventName,
+    () => {
+      unlockAudioContext();
+    },
+    { once: true }
+  );
 });
 
 // Unlock audio on first user interaction
