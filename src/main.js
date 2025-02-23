@@ -9,10 +9,10 @@ const ASTEROID_SPAWN_MAX = 4000; // 4 seconds
 const BULLET_COLOR = '#FFBF00';
 const STARTING_ASTEROIDS = 3;
 const INCREASE_ASTEROIDS_EVERY_N_HITS = 5;
-const STAR_SPAWN_MIN = 40000; // 40 seconds
-const STAR_SPAWN_MAX = 70000; // 70 seconds
-const SHIELD_SPAWN_MIN = 20000; // 20 seconds
-const SHIELD_SPAWN_MAX = 50000; // 50 seconds
+const STAR_SPAWN_MIN = 30000; // 30 seconds
+const STAR_SPAWN_MAX = 60000; // 60 seconds
+const SHIELD_SPAWN_MIN = 15000; // 15 seconds
+const SHIELD_SPAWN_MAX = 45000; // 45 seconds
 const SHIELD_DURATION = 8000; // 8 seconds
 const SHIELD_ROTATION_DURATION = 2500;
 const SHIELD_BLINK_DURATION = 2000; // 2 seconds blink warning
@@ -70,7 +70,8 @@ const player = {
   shieldAngle: 0,
   shieldVisible: true,
   lastShotTime: 0,
-  shootCooldown: 200 // min delay between shots
+  shootCooldown: 200, // min delay between shots,
+  shieldExpireSoundPlayed: false
 };
 
 let bullets = [];
@@ -883,7 +884,14 @@ function drawPlayer() {
 
     // Blink shield when it's about to expire
     if (timeLeft <= SHIELD_BLINK_DURATION) {
+      if (!player.shieldExpireSoundPlayed) {
+        playSound('power-up-expire');
+        player.shieldExpireSoundPlayed = true;
+      }
       player.shieldVisible = Math.floor(Date.now() / 250) % 2 === 0;
+    } else {
+      // Reset the flag when shield is not in blinking phase
+      player.shieldExpireSoundPlayed = false;
     }
 
     if (player.shieldVisible) {
@@ -998,6 +1006,7 @@ function restartGame() {
   player.shieldStartTime = 0;
   player.shieldAngle = 0;
   player.shieldVisible = true;
+  player.shieldExpireSoundPlayed = false;
   bullets = [];
   asteroids = Array(STARTING_ASTEROIDS)
     .fill()
@@ -1052,6 +1061,7 @@ function update() {
     const shieldElapsed = Date.now() - player.shieldStartTime;
     if (shieldElapsed >= SHIELD_DURATION) {
       player.hasShield = false;
+      player.shieldExpireSoundPlayed = false;
     }
   }
 
@@ -1291,6 +1301,7 @@ function update() {
             player.hasShield = true;
             player.shieldStartTime = Date.now();
             player.shieldVisible = true;
+            player.shieldExpireSoundPlayed = false;
             playSound('power-up');
             powerUps.splice(i, 1);
             score += 100;
@@ -1544,6 +1555,7 @@ async function preloadSounds() {
     'game-start': 'sounds/game-start.mp3',
     'power-up-spawn': 'sounds/power-up-spawn.mp3',
     'power-up': 'sounds/power-up.mp3',
+    'power-up-expire': 'sounds/power-up-expire.mp3',
     shoot: 'sounds/shoot.mp3',
     supernova: 'sounds/supernova.mp3'
   };
