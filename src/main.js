@@ -1332,16 +1332,18 @@ function update() {
   }
 
   const now = Date.now();
+  // Shield spawning - only spawn if enough time has passed since game start
   if (gameStarted && now >= pendingShieldSpawnTime && now - gameStartTime >= SHIELD_SPAWN_MIN) {
     powerUps.push(new Shield());
     playSound('power-up-spawn');
     pendingShieldSpawnTime = now + Math.random() * (SHIELD_SPAWN_MAX - SHIELD_SPAWN_MIN) + SHIELD_SPAWN_MIN;
   }
 
-  if (gameStarted && now >= pendingShieldSpawnTime) {
-    powerUps.push(new Shield());
+  // Star spawning
+  if (gameStarted && now >= pendingStarSpawnTime) {
+    powerUps.push(new Star());
     playSound('power-up-spawn');
-    pendingShieldSpawnTime = now + Math.random() * (SHIELD_SPAWN_MAX - SHIELD_SPAWN_MIN) + SHIELD_SPAWN_MIN;
+    pendingStarSpawnTime = now + Math.random() * (STAR_SPAWN_MAX - STAR_SPAWN_MIN) + STAR_SPAWN_MIN;
   }
 
   pendingAsteroids = pendingAsteroids.filter(pending => {
