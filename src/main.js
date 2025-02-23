@@ -977,8 +977,8 @@ function drawPlayer() {
 }
 
 async function startGame() {
-  gameStarted = true;
   await unlockAudioContext();
+  gameStarted = true;
   playSound('game-start');
   startDialog.style.display = 'none';
   gameStartTime = Date.now();
@@ -1671,16 +1671,6 @@ window.addEventListener('load', () => {
   updateHighScore();
 });
 
-['click', 'touchstart', 'keydown'].forEach(eventName => {
-  window.addEventListener(
-    eventName,
-    () => {
-      unlockAudioContext();
-    },
-    { once: true }
-  );
-});
-
 // Unlock audio on first user interaction
 window.addEventListener(
   'touchstart',
@@ -1698,8 +1688,12 @@ window.addEventListener(
   { once: true }
 );
 
-startDialog.addEventListener('click', handleStartGameInteraction);
-startDialog.addEventListener('touchend', handleStartGameInteraction);
+startDialog.addEventListener('click', async e => {
+  if (!e.target.closest('.gravity-label')) {
+    // Avoid triggering on gravity toggle
+    await startGame();
+  }
+});
 
 // Pause + restart the game when visibility changes
 document.addEventListener('visibilitychange', () => {
