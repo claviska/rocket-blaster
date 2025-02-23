@@ -1065,7 +1065,7 @@ function update() {
     }
   } else {
     // Handle rotation with easing
-    const maxRotationSpeed = 0.1;
+    const maxRotationSpeed = 0.075;
     const rotationEasing = 0.2;
 
     // Target rotation speed based on input
