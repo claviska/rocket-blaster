@@ -155,30 +155,42 @@ function checkForTextureMode() {
   }
 }
 
-function handleTouchStart(e) {
-  e.preventDefault();
-
-  // Start the game if it hasn't started yet, regardless of where the tap occurs
-  if (!gameStarted) {
-    startGame();
-    return; // Exit early after starting the game
+function handleStartGameInteraction(e) {
+  // Don't start the game if clicking the zero G checkbox
+  if (e.target.closest('.gravity-label')) {
+    return;
   }
 
-  // Handle touch controls if the game has started
+  if (!gameStarted) {
+    e.preventDefault();
+    startGame();
+  }
+}
+
+function handleTouchStart(e) {
+  // Only prevent default if we're handling game controls
+  if (e.target.classList.contains('touchButton')) {
+    e.preventDefault();
+  }
+
+  // Start game if not started
+  if (!gameStarted) {
+    startGame();
+    return;
+  }
+
+  // Handle touch controls
   const touches = e.touches;
   for (let i = 0; i < touches.length; i++) {
     const touch = touches[i];
     const x = touch.clientX;
     const y = touch.clientY;
-    if (isTouchingButton(x, y, leftButton)) touchState.left = true;
-    if (isTouchingButton(x, y, rightButton)) touchState.right = true;
-    if (isTouchingButton(x, y, thrustButton)) touchState.thrust = true;
-    if (isTouchingButton(x, y, shootButton)) touchState.shoot = true;
-  }
 
-  // Restart the game if the player has exploded and all pieces are gone
-  if (player.exploded && player.pieces.length === 0 && touches.length > 0) {
-    restartGame();
+    // Update touch states
+    touchState.left = isTouchingButton(x, y, leftButton);
+    touchState.right = isTouchingButton(x, y, rightButton);
+    touchState.thrust = isTouchingButton(x, y, thrustButton);
+    touchState.shoot = isTouchingButton(x, y, shootButton);
   }
 }
 
@@ -1485,20 +1497,22 @@ function initAudioContext() {
 }
 
 async function unlockAudioContext() {
-  const ctx = initAudioContext();
+  try {
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
 
-  if (ctx.state === 'suspended' || !isAudioUnlocked) {
-    try {
-      await ctx.resume();
+    if (audioContext.state === 'suspended' || !isAudioUnlocked) {
+      await audioContext.resume();
       isAudioUnlocked = true;
-      console.log('AudioContext unlocked');
-      // Preload sounds after unlocking if not already loaded
+
+      // Load sounds if not already loaded
       if (Object.keys(soundBuffers).length === 0) {
         await preloadSounds();
       }
-    } catch (err) {
-      console.error('Failed to unlock AudioContext:', err);
     }
+  } catch (err) {
+    console.warn('Audio context initialization failed:', err);
   }
 }
 
@@ -1544,16 +1558,65 @@ async function preloadSounds() {
   }
 }
 
-function toggleSound() {
-  isSoundEnabled = !isSoundEnabled;
-  soundToggle.textContent = isSoundEnabled ? '🔊' : '🔇';
-  soundToggle.classList.toggle('muted');
-  localStorage.setItem('soundEnabled', isSoundEnabled);
+function initSoundToggle() {
+  const soundToggle = document.getElementById('soundToggle');
+  let touchStartTime = 0;
 
+  // Use a single handler for both touch and click
+  function handleSoundToggle(e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Prevent double-firing on touch devices
+    if (e.type === 'touchend') {
+      const touchEndTime = Date.now();
+      if (touchEndTime - touchStartTime < 500) {
+        // Within 500ms
+        toggleSound();
+        unlockAudioContext();
+      }
+    } else if (e.type === 'click') {
+      // Only handle click if not a touch device
+      if (!('ontouchstart' in window)) {
+        toggleSound();
+        unlockAudioContext();
+      }
+    }
+  }
+
+  soundToggle.addEventListener('touchstart', e => {
+    e.preventDefault();
+    touchStartTime = Date.now();
+  });
+
+  soundToggle.addEventListener('touchend', handleSoundToggle);
+  soundToggle.addEventListener('click', handleSoundToggle);
+}
+
+function toggleSound() {
+  if (typeof isSoundEnabled === 'undefined') {
+    isSoundEnabled = true; // Set default if undefined
+  }
+  isSoundEnabled = !isSoundEnabled;
+
+  // Update UI
+  const soundToggle = document.getElementById('soundToggle');
+  soundToggle.textContent = isSoundEnabled ? '🔊' : '🔇';
+  soundToggle.classList.toggle('muted', !isSoundEnabled);
+
+  // Save preference
+  try {
+    localStorage.setItem('soundEnabled', isSoundEnabled.toString());
+  } catch (e) {
+    console.warn('Could not save sound preference:', e);
+  }
+
+  // Initialize audio if enabled
   if (isSoundEnabled) {
     unlockAudioContext();
   }
 }
+
 // Load zero gravity preference from localStorage
 const savedGravityState = localStorage.getItem('zeroGravity');
 if (savedGravityState !== null) {
@@ -1588,6 +1651,21 @@ window.addEventListener('mousemove', () => {
 });
 
 window.addEventListener('load', () => {
+  // Initialize sound state from localStorage
+  try {
+    const savedSoundState = localStorage.getItem('soundEnabled');
+    isSoundEnabled = savedSoundState === null ? true : savedSoundState === 'true';
+  } catch (e) {
+    isSoundEnabled = true;
+  }
+
+  // Initialize UI
+  const soundToggle = document.getElementById('soundToggle');
+  soundToggle.textContent = isSoundEnabled ? '🔊' : '🔇';
+  soundToggle.classList.toggle('muted', !isSoundEnabled);
+
+  // Initialize other components
+  initSoundToggle();
   updateHighScore();
 });
 
@@ -1609,6 +1687,7 @@ window.addEventListener(
   },
   { once: true }
 );
+
 window.addEventListener(
   'click',
   () => {
@@ -1616,6 +1695,9 @@ window.addEventListener(
   },
   { once: true }
 );
+
+startDialog.addEventListener('click', handleStartGameInteraction);
+startDialog.addEventListener('touchend', handleStartGameInteraction);
 
 // Pause + restart the game when visibility changes
 document.addEventListener('visibilitychange', () => {
