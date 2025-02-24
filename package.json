@@ -22,7 +22,7 @@
   "bugs": {
     "url": "https://github.com/claviska/rocket-blaster/issues"
   },
-  "homepage": "https://github.com/claviska/rocket-blaster#readme",
+  "homepage": "https://www.rocketblaster.app/",
   "devDependencies": {
     "http-server": "^14.1.1",
     "prettier": "^3.5.1",
