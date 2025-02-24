@@ -303,7 +303,7 @@ class Asteroid {
     this.angle = angle;
     this.hitRadius = this.size * 1.2;
     this.rotationAngle = 0;
-    this.rotationSpeed = Math.random() * 0.02 - 0.01;
+    this.rotationSpeed = Math.random() * 0.02 - 0.01; // Initial random spin (-0.01 to 0.01)
     this.spawnTime = Date.now();
     this.gracePeriod = 1000;
     this.fadeInDuration = 1000;
@@ -314,6 +314,10 @@ class Asteroid {
     this.explosionLife = 0;
     this.color = ASTEROID_COLORS[Math.floor(Math.random() * ASTEROID_COLORS.length)];
     this.points = [];
+
+    // Initialize velocity components
+    this.velX = this.speed * Math.cos(this.angle);
+    this.velY = this.speed * Math.sin(this.angle);
 
     const segments = 10;
     for (let i = 0; i < segments; i++) {
@@ -337,14 +341,11 @@ class Asteroid {
       return;
     }
 
-    // Initialize velocities if not present
-    if (!this.velX) this.velX = this.speed * Math.cos(this.angle);
-    if (!this.velY) this.velY = this.speed * Math.sin(this.angle);
-
     // Update position with velocity
     this.x += this.velX;
     this.y += this.velY;
 
+    // Boundary checks with bounce
     const buffer = this.hitRadius;
     if (this.x - buffer < 0) {
       this.x = buffer;
@@ -361,8 +362,10 @@ class Asteroid {
       this.velY = -Math.abs(this.velY);
     }
 
+    // Apply rotation
     this.rotationAngle += this.rotationSpeed;
 
+    // Handle fade-in effect
     const elapsed = Date.now() - this.spawnTime;
     if (elapsed < this.fadeInDuration) {
       this.scale = Math.min(1, elapsed / this.fadeInDuration);
@@ -431,7 +434,6 @@ class Asteroid {
       const baseColor = hexToRgb(this.color);
       const gradient = ctx.createRadialGradient(this.size * 0.3, -this.size * 0.3, 0, 0, 0, this.size * 1.2);
 
-      // Simplified gradient stops using color adjustment
       gradient.addColorStop(
         0,
         `rgb(${adjustColor(baseColor, 80).r}, ${adjustColor(baseColor, 80).g}, ${adjustColor(baseColor, 80).b})`
@@ -454,14 +456,12 @@ class Asteroid {
       drawAsteroidShape();
       ctx.fill();
 
-      // Generate craters if not already created
       if (!this.craters) {
         const craterCount = Math.floor(Math.random() * 3) + 5; // 5-7 craters
         this.craters = [];
         playSound('asteroid-spawn');
-        const minDistance = this.size * 0.3; // Minimum distance between craters
+        const minDistance = this.size * 0.3;
 
-        // Function to check if a point is too close to existing craters
         const isTooClose = (x, y, existingCraters, radius) => {
           return existingCraters.some(c => {
             const dx = c.x - x;
@@ -490,21 +490,18 @@ class Asteroid {
           } while (isTooClose(newCrater.x, newCrater.y, this.craters, newCrater.radius) && attempts < 20);
 
           if (attempts < 20) {
-            // Only add if we found a valid position
             this.craters.push(newCrater);
           }
         }
       }
 
-      // Save state and clip to asteroid shape for craters
       ctx.save();
       drawAsteroidShape();
       ctx.clip();
 
       this.craters.forEach(crater => {
-        // Crater shadow
         const shadowGradient = ctx.createRadialGradient(
-          crater.x + crater.radius * 0.2, // Slight offset for light source
+          crater.x + crater.radius * 0.2,
           crater.y - crater.radius * 0.2,
           0,
           crater.x,
@@ -512,10 +509,9 @@ class Asteroid {
           crater.radius * 1.2
         );
 
-        // Introduce variation in darkness
-        const darknessVariation = Math.random() * 20 - 10; // Random adjustment between -10 and +10
-        const deepShadow = adjustColor(baseColor, -70 + darknessVariation); // Lightened from -110, with variation
-        const midShadow = adjustColor(baseColor, -50 + darknessVariation); // Lightened from -100, with variation
+        const darknessVariation = Math.random() * 20 - 10;
+        const deepShadow = adjustColor(baseColor, -70 + darknessVariation);
+        const midShadow = adjustColor(baseColor, -50 + darknessVariation);
 
         shadowGradient.addColorStop(
           0,
@@ -529,17 +525,16 @@ class Asteroid {
         ctx.arc(crater.x, crater.y, crater.radius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Crater rim (darker, no white)
         const rimGradient = ctx.createRadialGradient(
-          crater.x - crater.radius * 0.3, // Stronger light source offset
+          crater.x - crater.radius * 0.3,
           crater.y - crater.radius * 0.3,
-          crater.radius * (1 - crater.rimWidth * 1.2), // Slightly thicker rim
+          crater.radius * (1 - crater.rimWidth * 1.2),
           crater.x,
           crater.y,
-          crater.radius * 1.15 // Slightly larger rim
+          crater.radius * 1.15
         );
-        const highlightColor = adjustColor(baseColor, 50); // Unchanged
-        const lightColor = adjustColor(baseColor, 20); // Unchanged
+        const highlightColor = adjustColor(baseColor, 50);
+        const lightColor = adjustColor(baseColor, 20);
         rimGradient.addColorStop(
           0,
           `rgba(${highlightColor.r}, ${highlightColor.g}, ${highlightColor.b}, ${crater.rimLight * 1.2})`
@@ -548,7 +543,7 @@ class Asteroid {
           0.4,
           `rgba(${lightColor.r}, ${lightColor.g}, ${lightColor.b}, ${crater.rimLight * 0.8})`
         );
-        rimGradient.addColorStop(1, `rgba(${baseColor.r}, ${baseColor.g}, ${baseColor.b}, 0)`); // Fade to base color
+        rimGradient.addColorStop(1, `rgba(${baseColor.r}, ${baseColor.g}, ${baseColor.b}, 0)`);
 
         ctx.fillStyle = rimGradient;
         ctx.beginPath();
@@ -556,7 +551,7 @@ class Asteroid {
         ctx.fill();
       });
 
-      ctx.restore(); // Restore state after drawing clipped craters
+      ctx.restore();
     }
 
     ctx.restore();
@@ -1033,26 +1028,41 @@ class BlackHole {
       const forceX = (dx / distance) * force;
       const forceY = (dy / distance) * force;
 
-      if (obj instanceof Asteroid || obj instanceof Star || obj instanceof Shield) {
-        if (!obj.velX) obj.velX = 0;
-        if (!obj.velY) obj.velY = 0;
+      if (obj instanceof Asteroid && !obj.exploded) {
+        // Apply linear acceleration
         obj.velX += forceX;
         obj.velY += forceY;
+
+        // Calculate tangential component for spin (cross product approximation)
+        const velocityMag = Math.sqrt(obj.velX * obj.velX + obj.velY * obj.velY);
+        if (velocityMag > 0) {
+          const velXNorm = obj.velX / velocityMag;
+          const velYNorm = obj.velY / velocityMag;
+          // Tangential direction is perpendicular to radial (dx, dy)
+          const tangentX = -dy / distance;
+          const tangentY = dx / distance;
+          // Dot product of velocity with tangent gives tangential speed
+          const tangentialSpeed = velXNorm * tangentX + velYNorm * tangentY;
+          // Adjust rotation speed based on tangential motion and distance
+          const spinFactor = 0.0005; // Adjust this for desired spin sensitivity
+          const spinChange = ((tangentialSpeed * force) / (distance * obj.size)) * spinFactor;
+          obj.rotationSpeed += spinChange;
+          // Clamp rotation speed to prevent excessive spinning
+          obj.rotationSpeed = Math.max(-0.05, Math.min(0.05, obj.rotationSpeed));
+        }
       } else if (obj === player) {
         obj.velX += forceX;
         obj.velY += forceY;
       } else if (obj instanceof Bullet) {
-        // Convert current velocity to components
         let velX = obj.speed * Math.cos(obj.angle);
         let velY = obj.speed * Math.sin(obj.angle);
-
-        // Apply gravitational force
         velX += forceX;
         velY += forceY;
-
-        // Update bullet speed and angle based on new velocity
         obj.speed = Math.sqrt(velX * velX + velY * velY);
         obj.angle = Math.atan2(velY, velX);
+      } else if (obj instanceof Star || obj instanceof Shield) {
+        obj.velX += forceX;
+        obj.velY += forceY;
       }
     }
   }
@@ -1467,20 +1477,12 @@ function update() {
           const dy = player.y - blackHoles[i].y;
           const distance = Math.sqrt(dx * dx + dy * dy);
           if (distance < player.hitRadius + blackHoles[i].collisionRadius) {
-            if (player.hasShield) {
-              blackHoles.splice(i, 1);
-              playSound('asteroid-explode');
-              score += 100;
-              break;
-            } else {
-              player.exploded = true;
-              playSound('game-over'); // Play the rocket's explosion sound
-              // Remove explosion pieces to skip animation
-              player.pieces = []; // Ensure no pieces are drawn
-              shakeCanvas(); // Keep the shake for feedback
-              bullets = [];
-              break;
-            }
+            // Even with a shield, black hole collision ends the game
+            player.exploded = true;
+            playSound('game-over');
+            shakeCanvas();
+            bullets = [];
+            break;
           }
         }
       }
