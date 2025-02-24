@@ -19,7 +19,3 @@ npm start
 ## Ideas
 
 - [ ] ability to select ship color
-- [ ] black hole
-  - appears for 10 seconds
-  - scales in but doesn't move
-  - sucks in asteroids and maybe the rocket with gravitational physics when too close
