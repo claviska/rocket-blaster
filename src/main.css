@@ -190,9 +190,9 @@ body {
   }
 
   .author {
-    margin-block-start: 30px;
     color: white;
     font-size: 0.6875em; /* 22px on desktop, 16.5px on mobile (adjusted to match 18px) */
+    text-shadow: 0 0 8px rgb(255, 255, 255, 0.8);
   }
 
   .author a {
@@ -212,14 +212,14 @@ body {
 }
 
 #startButton {
-  margin-top: 25px;
+  margin-block: 10px 20px;
   padding: 15px 30px;
   border: 2px solid #00ffcc;
   border-radius: 5px;
   background: none;
   color: #00ffcc;
   font-weight: 700;
-  font-size: 0.75em; /* 24px on desktop, 18px on mobile (adjusted to match 20px) */
+  font-size: 0.75em;
   font-family: 'Orbitron', sans-serif;
   text-shadow: 0 0 5px rgba(0, 255, 204, 0.8);
   cursor: pointer;
@@ -234,30 +234,41 @@ body {
   }
 }
 
+.gravity-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-block: 20px;
+  gap: 0.25em;
+  font-size: 0.875em;
+  cursor: pointer;
+}
+
 #zeroGravityToggle {
   appearance: none;
   -webkit-appearance: none;
   position: relative;
-  width: 50px;
-  height: 26px;
-  margin: 0 8px;
-  border: 2px solid #00ffcc;
-  border-radius: 26px;
+  --switch-height: 2em;
+  width: calc(var(--switch-height) * 1.923); /* 3.125em / 1.625em ≈ 1.923 (maintains 50px:26px ratio) */
+  height: var(--switch-height);
+  margin: 0 0.5em;
+  border: calc(var(--switch-height) * 0.077) solid #00ffcc; /* 0.125em / 1.625em ≈ 0.077 (2px:26px) */
+  border-radius: var(--switch-height);
   background: transparent;
-  box-shadow: 0 0 8px #00ffcc;
+  box-shadow: 0 0 calc(var(--switch-height) * 0.308) #00ffcc; /* 0.5em / 1.625em ≈ 0.308 (8px:26px) */
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 #zeroGravityToggle::after {
   position: absolute;
-  top: 1px;
-  left: 1px;
-  width: 20px;
-  height: 20px;
+  top: calc(var(--switch-height) * 0.0385); /* 0.0625em / 1.625em ≈ 0.0385 (1px:26px) */
+  left: calc(var(--switch-height) * 0.0385); /* 0.0625em / 1.625em ≈ 0.0385 (1px:26px) */
+  width: calc(var(--switch-height) * 0.769); /* 1.25em / 1.625em ≈ 0.769 (20px:26px) */
+  height: calc(var(--switch-height) * 0.769); /* 1.25em / 1.625em ≈ 0.769 (20px:26px) */
   border-radius: 50%;
   background: #00ffcc;
-  box-shadow: 0 0 5px rgba(0, 255, 204, 0.5);
+  box-shadow: 0 0 calc(var(--switch-height) * 0.192) rgba(0, 255, 204, 0.5); /* 0.3125em / 1.625em ≈ 0.192 (5px:26px) */
   content: '';
   transition: all 0.3s ease;
 }
@@ -265,21 +276,13 @@ body {
 #zeroGravityToggle:checked {
   border-color: #00ffcc;
   background: rgba(0, 255, 204, 0.3);
-  box-shadow: 0 0 12px #00ffcc;
+  box-shadow: 0 0 calc(var(--switch-height) * 0.462) #00ffcc; /* 0.75em / 1.625em ≈ 0.462 (12px:26px) */
 }
 
 #zeroGravityToggle:checked::after {
-  transform: translateX(24px);
+  transform: translateX(calc(var(--switch-height) * 0.923)); /* 1.5em / 1.625em ≈ 0.923 (24px:26px) */
   background: #00ffcc;
-  box-shadow: 0 0 8px #00ffcc;
-}
-
-#zeroGravityToggle:active::after {
-  width: 26px;
-}
-
-.gravity-label {
-  cursor: pointer;
+  box-shadow: 0 0 calc(var(--switch-height) * 0.308) #00ffcc; /* 0.5em / 1.625em ≈ 0.308 (8px:26px) */
 }
 
 #touchControls {
