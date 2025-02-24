@@ -226,7 +226,7 @@ body {
   margin-block: 10px 20px;
   padding: 15px 30px;
   border: 2px solid #00ffcc;
-  border-radius: 5px;
+  border-radius: 9999px;
   background: none;
   box-shadow: 0 0 8px #00ffcc;
   color: #00ffcc;
