@@ -138,11 +138,6 @@ window.addEventListener('keydown', e => {
   if (!gameStarted && !e.metaKey && !e.shiftKey && !e.ctrlKey) {
     startGame();
   }
-
-  // Restart game only when game is over and explosion pieces have settled
-  else if (gameStarted && player.exploded && player.pieces.length === 0 && !e.metaKey && !e.shiftKey && !e.ctrlKey) {
-    restartGame();
-  }
 });
 window.addEventListener('keyup', e => (keys[e.key] = false));
 
