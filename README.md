@@ -18,4 +18,4 @@ npm start
 
 ## Ideas
 
-- [ ] ability to select ship color
+- [ ] add color slider to select ship color (saved to localStorage; reset button)
