@@ -19,4 +19,4 @@ npm start
 ## Ideas
 
 - [ ] add color slider to select ship color (saved to localStorage; reset button)
-- [ ] When you have a 3+ streak (?), the ship starts shooting a spread of three bullets
+- [ ] add power up like shield but it lets you shoot a spread of 3-5 bullets instead of one until it runs out
