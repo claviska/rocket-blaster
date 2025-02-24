@@ -142,6 +142,14 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => (keys[e.key] = false));
 
+// Start button listener
+document.getElementById('startButton').addEventListener('click', e => {
+  e.preventDefault();
+  if (!gameStarted) {
+    startGame();
+  }
+});
+
 // Touch controls
 const touchState = {
   left: false,
@@ -182,7 +190,7 @@ function handleTouchStart(e) {
   }
 
   // Start game if not started
-  if (!gameStarted) {
+  if (!gameStarted && e.target.id === 'startButton') {
     startGame();
     return;
   }
@@ -2079,13 +2087,6 @@ window.addEventListener(
   },
   { once: true }
 );
-
-document.addEventListener('click', async e => {
-  // Avoid triggering on gravity toggle
-  if (!e.target.closest('.gravity-label')) {
-    await startGame();
-  }
-});
 
 // Pause + restart the game when visibility changes
 document.addEventListener('visibilitychange', () => {

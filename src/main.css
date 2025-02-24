@@ -212,6 +212,30 @@ body {
   }
 }
 
+#startButton {
+  margin-top: 25px;
+  padding: 15px 30px;
+  border: 2px solid #00ffcc;
+  border-radius: 5px;
+  background: none;
+  color: #00ffcc;
+  font-weight: 700;
+  font-size: 24px;
+  font-family: 'Orbitron', sans-serif;
+  text-shadow: 0 0 5px rgba(0, 255, 204, 0.8);
+  cursor: pointer;
+  transition: 100ms translate;
+
+  &:active {
+    translate: 0 2px;
+  }
+
+  @media screen and (max-width: 767px) {
+    padding: 10px 25px;
+    font-size: 20px;
+  }
+}
+
 #zeroGravityToggle {
   appearance: none;
   -webkit-appearance: none;
