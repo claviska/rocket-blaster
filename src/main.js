@@ -7,18 +7,19 @@ const ASTEROID_MAX_SIZE = 45;
 const ASTEROID_SPAWN_MIN = 1000; // 1 second
 const ASTEROID_SPAWN_MAX = 4000; // 4 seconds
 const BULLET_COLOR = '#FFBF00';
+const BULLET_GRAVITY_MULTIPLIER = 10;
 const STARTING_ASTEROIDS = 3;
 const INCREASE_ASTEROIDS_EVERY_N_HITS = 5;
 const BLACK_HOLE_SIZE = ASTEROID_MAX_SIZE * 1.75;
 const BLACK_HOLE_DURATION = 10000; // 10 seconds
 const BLACK_HOLE_GRAVITY_STRENGTH = 0.15;
 const BLACK_HOLE_ROTATION_SPEED = 0.075;
-const BLACK_HOLE_SPAWN_MIN = 15000; // 15 seconds
-const BLACK_HOLE_SPAWN_MAX = 45000; // 45 seconds
-const STAR_SPAWN_MIN = 45000; // 45 seconds
-const STAR_SPAWN_MAX = 75000; // 75 seconds
-const SHIELD_SPAWN_MIN = 20000; // 20 seconds
-const SHIELD_SPAWN_MAX = 50000; // 50 seconds
+const BLACK_HOLE_SPAWN_MIN = 30000; // 30 seconds
+const BLACK_HOLE_SPAWN_MAX = 70000; // 70 seconds
+const STAR_SPAWN_MIN = 60000; // 60 seconds
+const STAR_SPAWN_MAX = 100000; // 100 seconds
+const SHIELD_SPAWN_MIN = 30000; // 30 seconds
+const SHIELD_SPAWN_MAX = 60000; // 70 seconds
 const SHIELD_DURATION = 8000; // 8 seconds
 const SHIELD_ROTATION_DURATION = 2500;
 const SHIELD_BLINK_DURATION = 2000; // 2 seconds blink warning
@@ -43,6 +44,7 @@ const leftButton = document.getElementById('leftButton');
 const rightButton = document.getElementById('rightButton');
 const thrustButton = document.getElementById('thrustButton');
 const shootButton = document.getElementById('shootButton');
+const restartButton = document.getElementById('restartButton');
 const savedSoundState = localStorage.getItem('soundEnabled');
 let scaleFactor = window.innerWidth < 768 ? 0.5 : 1;
 
@@ -110,6 +112,7 @@ let shakeStartTime = 0;
 let isPaused = false;
 let pauseTime = 0;
 let isSoundEnabled = true;
+let wasThrusting = false;
 
 const stars = [];
 for (let i = 0; i < STAR_COUNT; i++) {
@@ -134,8 +137,14 @@ window.addEventListener('keydown', e => {
     asteroids.push(new Asteroid());
   }
 
-  // Start game only if not started and not in game over state
-  if (!gameStarted && !e.metaKey && !e.shiftKey && !e.ctrlKey) {
+  // Prevent game start from key presses when startDialog is visible
+  if (!gameStarted && startDialog.style.display !== 'none') {
+    // Do nothing - wait for Start button click
+    return;
+  }
+
+  // Start game only if not started, not in game over state, and dialog is hidden
+  if (!gameStarted && !e.metaKey && !e.shiftKey && !e.ctrlKey && startDialog.style.display === 'none') {
     startGame();
   }
 });
@@ -1041,9 +1050,15 @@ class BlackHole {
 
     if (distance < gravityRadius && distance > 0) {
       // Adjust gravity strength based on Zero G mode
-      const gravityStrength = zeroGravityToggle.checked
+      let gravityStrength = zeroGravityToggle.checked
         ? BLACK_HOLE_GRAVITY_STRENGTH * 0.2 // Reduce strength in Zero G (e.g., 20% of normal)
         : BLACK_HOLE_GRAVITY_STRENGTH; // Normal strength otherwise
+
+      // Apply multiplier only for bullets
+      if (obj instanceof Bullet) {
+        gravityStrength *= BULLET_GRAVITY_MULTIPLIER;
+      }
+
       const force = (gravityStrength * 100) / distance;
       const forceX = (dx / distance) * force;
       const forceY = (dy / distance) * force;
@@ -1234,6 +1249,8 @@ function restartGame() {
   player.shieldAngle = 0;
   player.shieldVisible = true;
   player.shieldExpireSoundPlayed = false;
+  player.isThrusting = false;
+  wasThrusting = false;
   bullets = [];
   asteroids = Array(STARTING_ASTEROIDS)
     .fill()
@@ -1242,6 +1259,7 @@ function restartGame() {
   blackHoles = [];
   pendingAsteroids = [];
   score = 0;
+  updateHighScore();
   shotsFired = 0;
   hits = 0;
   targetAsteroids = 2;
@@ -1267,14 +1285,13 @@ function updateHighScore() {
   if (score > cachedHighScore) {
     cachedHighScore = score;
     localStorage.setItem('highScore', score);
-    highScoreDisplay.textContent = `High: ${score}`;
+    highScoreDisplay.textContent = `Best: ${score}`;
     highScoreDisplay.style.display = 'block';
-    highScoreDisplay.classList.add('is-current');
-  } else if (cachedHighScore > 0) {
-    highScoreDisplay.textContent = `High: ${cachedHighScore}`;
-    highScoreDisplay.style.display = 'block';
+    highScoreDisplay.classList.add('is-current'); // Apply orange color and blinking
   } else {
-    highScoreDisplay.style.display = 'none';
+    highScoreDisplay.textContent = `Best: ${cachedHighScore}`;
+    highScoreDisplay.style.display = 'block'; // Always show the display
+    highScoreDisplay.classList.remove('is-current'); // Reset to default color
   }
 }
 
@@ -1300,6 +1317,7 @@ function update() {
     player.pieces = player.pieces.filter(p => p.life > 0);
     if (player.pieces.length === 0) {
       gameOverDisplay.style.display = 'block';
+      restartButton.focus({ focusVisible: false });
       updateHighScore();
     }
   } else {
@@ -1328,6 +1346,24 @@ function update() {
     const isZeroGravity = zeroGravityToggle.checked;
     const isThrusting = keys['ArrowUp'] || touchState.thrust;
     const isReversing = keys['ArrowDown'];
+
+    // Calculate new thrusting state
+    const newIsThrusting =
+      keys['ArrowUp'] ||
+      touchState.thrust ||
+      keys['ArrowDown'] ||
+      keys['ArrowLeft'] ||
+      touchState.left ||
+      keys['ArrowRight'] ||
+      touchState.right;
+
+    // Play sound when thrust animation starts
+    if (newIsThrusting && !wasThrusting && gameStarted) {
+      playSound('thrust');
+    }
+
+    player.isThrusting = newIsThrusting;
+    wasThrusting = newIsThrusting;
 
     if (isZeroGravity) {
       // Zero gravity mode
@@ -1407,7 +1443,6 @@ function update() {
         playSound('shoot');
         shotsFired++;
         player.lastShotTime = currentTime;
-        keys[' '] = false;
         touchState.shoot = false;
         player.shootScale = 1.15;
         player.shootTimer = 10;
@@ -1454,10 +1489,7 @@ function update() {
           score += 50;
           hits++;
           asteroidsDestroyed += 1;
-
-          if (score > cachedHighScore) {
-            updateHighScore();
-          }
+          updateHighScore();
 
           const delay = Math.random() * (ASTEROID_SPAWN_MAX - ASTEROID_SPAWN_MIN) + ASTEROID_SPAWN_MIN;
           pendingAsteroids.push({ spawnTime: Date.now() + delay });
@@ -1512,6 +1544,7 @@ function update() {
               playSound('asteroid-explode');
               score += 50;
               hits++;
+              updateHighScore();
 
               const delay = Math.random() * (ASTEROID_SPAWN_MAX - ASTEROID_SPAWN_MIN) + ASTEROID_SPAWN_MIN;
               pendingAsteroids.push({ spawnTime: Date.now() + delay });
@@ -1554,6 +1587,7 @@ function update() {
             playSound('power-up');
             powerUps.splice(i, 1);
             score += 100;
+            updateHighScore();
           } else if (p instanceof Star) {
             let destroyedCount = 0;
             asteroids.forEach(a => {
@@ -1580,6 +1614,7 @@ function update() {
                 Date.now() + Math.random() * (BLACK_HOLE_SPAWN_MAX - BLACK_HOLE_SPAWN_MIN) + BLACK_HOLE_SPAWN_MIN;
             }
             score += destroyedCount * 50 + 1000;
+            updateHighScore();
             powerUps.splice(i, 1);
             asteroids = asteroids.filter(a => a.exploded && a.explosionLife > 0);
             for (let i = 0; i < STARTING_ASTEROIDS; i++) {
@@ -1936,13 +1971,15 @@ async function preloadSounds() {
     'asteroid-spawn': 'sounds/asteroid-spawn.mp3',
     'black-hole-destroy': 'sounds/black-hole-destroy.mp3',
     'black-hole-spawn': 'sounds/black-hole-spawn.mp3',
+    click: 'sounds/click.mp3',
     'game-over': 'sounds/game-over.mp3',
     'game-start': 'sounds/game-start.mp3',
     'power-up-spawn': 'sounds/power-up-spawn.mp3',
     'power-up': 'sounds/power-up.mp3',
     'power-up-expire': 'sounds/power-up-expire.mp3',
     shoot: 'sounds/shoot.mp3',
-    supernova: 'sounds/supernova.mp3'
+    supernova: 'sounds/supernova.mp3',
+    thrust: 'sounds/thrust.mp3'
   };
 
   for (const [key, url] of Object.entries(soundFiles)) {

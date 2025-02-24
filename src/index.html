@@ -14,9 +14,9 @@
     <div id="score">Score: 0</div>
     <div id="accuracy">Accuracy: 0%</div>
     <div id="hits">Hits: 0</div>
-    <div id="highScore">High: 0</div>
+    <div id="highScore">Best: 0</div>
     <div id="timer">0:00</div>
-    <div id="soundToggle">
+    <button id="soundToggle" aria-label="Toggle sound">
       <svg
         xmlns="http://www.w3.org/2000/svg"
         width="24"
@@ -54,14 +54,14 @@
         />
         <path d="M16 10l4 4m0 -4l-4 4" />
       </svg>
-    </div>
+    </button>
     <div id="gameOver">
       Game Over<br />
       <button id="restartButton" class="game-button">Play Again</button>
     </div>
     <div id="startDialog">
       <h1>Rocket Blaster</h1>
-      <div class="subtitle">Destroy asteroids to save the world</div>
+      <div class="subtitle">Destroy asteroids and avoid black holes</div>
       <div class="instructions">
         Move: arrows<br />
         Shoot: space

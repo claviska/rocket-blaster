@@ -1,3 +1,16 @@
+html.is-using-keyboard {
+  cursor: none;
+}
+
+body {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: black;
+  -webkit-text-size-adjust: 100%;
+}
+
 canvas {
   width: 100vw;
   height: 100dvh;
@@ -10,17 +23,13 @@ canvas {
   }
 }
 
-html.is-using-keyboard {
-  cursor: none;
+:focus {
+  outline: none;
 }
 
-body {
-  position: relative;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  background: black;
-  -webkit-text-size-adjust: 100%;
+:focus-visible {
+  outline: dotted 3px #00ffcc;
+  outline-offset: 3px;
 }
 
 #score {
@@ -66,7 +75,7 @@ body {
   right: 20px;
   color: #00ffcc;
   font-weight: 700;
-  font-size: 20px;
+  font-size: 24px;
   font-family: 'Orbitron', sans-serif;
   text-shadow: 0 0 5px rgba(0, 255, 204, 0.8);
 
@@ -107,9 +116,13 @@ body {
   right: 20px;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 9999px;
+  background: none;
   color: #00ffcc;
+  font: inherit;
   font-size: 24px;
   font-family: 'Orbitron', sans-serif;
   text-shadow: 0 0 5px rgba(0, 255, 204, 0.8);
@@ -122,8 +135,8 @@ body {
   }
 
   .icon {
-    width: 34px;
-    height: 34px;
+    width: 40px;
+    height: 40px;
   }
 
   &.muted .icon-volume,
@@ -181,6 +194,10 @@ body {
     color: rgb(2, 183, 255);
     text-shadow: 0 0 8px rgb(2, 183, 255, 0.8);
     text-wrap: balance;
+
+    @media screen and (max-width: 767px) {
+      font-size: 1.25em;
+    }
   }
 
   .subtitle {
@@ -234,6 +251,7 @@ body {
   font-size: 24px;
   font-family: 'Orbitron', sans-serif;
   text-shadow: 0 0 5px rgba(0, 255, 204, 0.8);
+  animation: pulse 1.5s ease-in-out infinite;
   cursor: pointer;
   transition: 100ms translate;
 
@@ -243,6 +261,18 @@ body {
 
   @media screen and (max-width: 767px) {
     padding: 10px 25px;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.033);
+  }
+  100% {
+    transform: scale(1);
   }
 }
 
@@ -269,7 +299,7 @@ body {
   background: transparent;
   box-shadow: 0 0 calc(var(--switch-height) * 0.308) #00ffcc; /* 0.5em / 1.625em ≈ 0.308 (8px:26px) */
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease;
 }
 
 #zeroGravityToggle::after {
