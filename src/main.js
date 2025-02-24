@@ -575,13 +575,14 @@ class Asteroid {
 }
 
 class ExplosionPiece {
-  constructor(x, y, angle, size) {
+  constructor(x, y, angle, size, color) {
     this.x = x;
     this.y = y;
     this.angle = angle;
     this.speed = Math.random() * 5 + 2;
     this.size = size;
     this.life = 60;
+    this.color = color;
   }
 
   move() {
@@ -591,7 +592,7 @@ class ExplosionPiece {
   }
 
   draw() {
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = this.color;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
     ctx.fill();
@@ -1438,7 +1439,7 @@ function update() {
           for (let k = 0; k < 8; k++) {
             const angle = Math.random() * Math.PI * 2;
             const size = Math.random() * 3 + 1;
-            asteroidPieces.push(new ExplosionPiece(asteroids[i].x, asteroids[i].y, angle, size));
+            asteroidPieces.push(new ExplosionPiece(asteroids[i].x, asteroids[i].y, angle, size, asteroids[i].color));
           }
 
           asteroids[i].exploded = true;
@@ -1500,7 +1501,9 @@ function update() {
               for (let k = 0; k < 8; k++) {
                 const angle = Math.random() * Math.PI * 2;
                 const size = Math.random() * 3 + 1;
-                asteroids[i].pieces.push(new ExplosionPiece(asteroids[i].x, asteroids[i].y, angle, size));
+                asteroids[i].pieces.push(
+                  new ExplosionPiece(asteroids[i].x, asteroids[i].y, angle, size, asteroids[i].color)
+                );
               }
               asteroids[i].explosionLife = 30;
               playSound('asteroid-explode');
@@ -1521,7 +1524,7 @@ function update() {
               for (let j = 0; j < 20; j++) {
                 const angle = Math.random() * Math.PI * 2;
                 const size = Math.random() * 5 + 2;
-                player.pieces.push(new ExplosionPiece(player.x, player.y, angle, size));
+                player.pieces.push(new ExplosionPiece(player.x, player.y, angle, size, ROCKET_COLOR));
               }
               shakeCanvas();
               bullets = [];
@@ -1557,7 +1560,7 @@ function update() {
                 for (let k = 0; k < 8; k++) {
                   const angle = Math.random() * Math.PI * 2;
                   const size = Math.random() * 3 + 1;
-                  a.pieces.push(new ExplosionPiece(a.x, a.y, angle, size));
+                  a.pieces.push(new ExplosionPiece(a.x, a.y, angle, size, a.color));
                 }
                 a.explosionLife = 30;
                 destroyedCount++;
