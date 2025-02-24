@@ -1832,6 +1832,47 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
+function pauseGame() {
+  if (!isPaused) {
+    isPaused = true;
+    pauseTime = Date.now();
+    // No need to stop the gameLoop explicitly since it checks isPaused
+  }
+}
+
+function resumeGame() {
+  if (isPaused) {
+    isPaused = false;
+    const pauseDuration = Date.now() - pauseTime;
+
+    // Adjust all timers to account for the pause duration
+    if (gameStarted) {
+      gameStartTime += pauseDuration;
+    }
+    if (pendingStarSpawnTime) pendingStarSpawnTime += pauseDuration;
+    if (pendingShieldSpawnTime) pendingShieldSpawnTime += pauseDuration;
+    if (pendingBlackHoleSpawnTime) pendingBlackHoleSpawnTime += pauseDuration;
+    if (player.hasShield) player.shieldStartTime += pauseDuration;
+    if (flashActive) flashStartTime += pauseDuration;
+    if (isShaking) shakeStartTime += pauseDuration;
+
+    pendingAsteroids = pendingAsteroids.map(pending => ({
+      ...pending,
+      spawnTime: pending.spawnTime + pauseDuration
+    }));
+
+    asteroids.forEach(a => {
+      a.spawnTime += pauseDuration;
+    });
+    powerUps.forEach(p => {
+      p.spawnTime += pauseDuration;
+    });
+    blackHoles.forEach(bh => {
+      bh.spawnTime += pauseDuration;
+    });
+  }
+}
+
 // Sound management with Web Audio API
 let audioContext = null;
 let isAudioUnlocked = false;
@@ -2047,34 +2088,14 @@ document.addEventListener('click', async e => {
 // Pause + restart the game when visibility changes
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
-    isPaused = true;
-    pauseTime = Date.now();
-  } else if (isPaused) {
-    isPaused = false;
-    const pauseDuration = Date.now() - pauseTime;
-
-    // Adjust all timers
-    gameStartTime += pauseDuration;
-    pendingStarSpawnTime += pauseDuration;
-    pendingShieldSpawnTime += pauseDuration;
-    pendingBlackHoleSpawnTime += pauseDuration;
-    if (player.hasShield) player.shieldStartTime += pauseDuration;
-    if (flashActive) flashStartTime += pauseDuration;
-    if (isShaking) shakeStartTime += pauseDuration;
-
-    pendingAsteroids = pendingAsteroids.map(pending => ({
-      ...pending,
-      spawnTime: pending.spawnTime + pauseDuration
-    }));
-
-    asteroids.forEach(a => {
-      a.spawnTime += pauseDuration;
-    });
-    powerUps.forEach(p => {
-      p.spawnTime += pauseDuration;
-    });
+    pauseGame();
+  } else {
+    resumeGame();
   }
 });
+
+window.addEventListener('blur', () => pauseGame());
+window.addEventListener('focus', () => resumeGame());
 
 if (savedSoundState !== null) {
   isSoundEnabled = savedSoundState === 'true';
