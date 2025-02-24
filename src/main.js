@@ -1993,7 +1993,6 @@ function toggleSound() {
 
   // Update UI
   const soundToggle = document.getElementById('soundToggle');
-  soundToggle.textContent = isSoundEnabled ? '🔊' : '🔇';
   soundToggle.classList.toggle('muted', !isSoundEnabled);
 
   // Save preference
@@ -2053,7 +2052,6 @@ window.addEventListener('load', () => {
 
   // Initialize UI
   const soundToggle = document.getElementById('soundToggle');
-  soundToggle.textContent = isSoundEnabled ? '🔊' : '🔇';
   soundToggle.classList.toggle('muted', !isSoundEnabled);
 
   // Initialize other components
@@ -2092,7 +2090,6 @@ window.addEventListener('focus', () => resumeGame());
 
 if (savedSoundState !== null) {
   isSoundEnabled = savedSoundState === 'true';
-  soundToggle.textContent = isSoundEnabled ? '🔊' : '🔇';
   soundToggle.classList.toggle('muted', !isSoundEnabled);
 }
 

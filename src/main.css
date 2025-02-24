@@ -115,11 +115,21 @@ body {
   text-shadow: 0 0 5px rgba(0, 255, 204, 0.8);
   cursor: pointer;
   transition: color 0.3s ease;
-}
 
-#soundToggle.muted {
-  color: #ff3366;
-  text-shadow: 0 0 5px rgba(255, 51, 102, 0.8);
+  &.muted {
+    color: #ff3366;
+    text-shadow: 0 0 5px rgba(255, 51, 102, 0.8);
+  }
+
+  .icon {
+    width: 34px;
+    height: 34px;
+  }
+
+  &.muted .icon-volume,
+  &:not(.muted) .icon-muted {
+    display: none;
+  }
 }
 
 #gameOver {
