@@ -154,6 +154,14 @@ document.getElementById('startButton').addEventListener('click', e => {
   }
 });
 
+// Restart button listener
+document.getElementById('restartButton').addEventListener('click', e => {
+  e.preventDefault();
+  if (gameStarted && player.exploded && player.pieces.length === 0) {
+    restartGame();
+  }
+});
+
 // Touch controls
 const touchState = {
   left: false,

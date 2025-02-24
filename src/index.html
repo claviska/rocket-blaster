@@ -55,7 +55,10 @@
         <path d="M16 10l4 4m0 -4l-4 4" />
       </svg>
     </div>
-    <div id="gameOver">Game Over<br /><small>tap to restart</small></div>
+    <div id="gameOver">
+      Game Over<br />
+      <button id="restartButton" class="game-button">Play Again</button>
+    </div>
     <div id="startDialog">
       <h1>Rocket Blaster</h1>
       <div class="subtitle">Destroy asteroids to save the world</div>
@@ -64,7 +67,7 @@
         Shoot: space
       </div>
       <label class="gravity-label"><input type="checkbox" id="zeroGravityToggle" /> Zero G</label>
-      <button id="startButton">Start Game</button>
+      <button id="startButton" class="game-button">Start Game</button>
       <div class="author">
         by <a href="https://x.com/cory_laviska" target="_blank">Cory LaViska</a> &middot;
         <a href="https://github.com/claviska/rocket-blaster/" target="_blank">source</a>

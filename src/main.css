@@ -134,7 +134,7 @@ body {
 
 #gameOver {
   display: none;
-  z-index: 1;
+  z-index: 20;
   position: absolute;
   top: 50%;
   left: 50%;
@@ -147,10 +147,6 @@ body {
   font-family: 'Orbitron', sans-serif;
   text-align: center;
   text-shadow: 0 0 10px rgba(255, 51, 102, 0.8);
-
-  small {
-    font-size: 32px;
-  }
 
   @media screen and (max-width: 767px) {
     top: 50dvh; /* Center relative to viewport height */
@@ -226,15 +222,16 @@ body {
   }
 }
 
-#startButton {
+.game-button {
   margin-block: 10px 20px;
   padding: 15px 30px;
   border: 2px solid #00ffcc;
   border-radius: 5px;
   background: none;
+  box-shadow: 0 0 8px #00ffcc;
   color: #00ffcc;
   font-weight: 700;
-  font-size: 0.75em;
+  font-size: 24px;
   font-family: 'Orbitron', sans-serif;
   text-shadow: 0 0 5px rgba(0, 255, 204, 0.8);
   cursor: pointer;
