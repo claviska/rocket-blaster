@@ -341,6 +341,12 @@ canvas {
   }
 }
 
+@media (hover: none) and (pointer: coarse) {
+  .keyboard-only {
+    display: none;
+  }
+}
+
 .touchButton {
   display: flex;
   position: absolute;
