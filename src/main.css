@@ -20,6 +20,7 @@ body {
   padding: 0;
   overflow: hidden;
   background: black;
+  -webkit-text-size-adjust: 100%;
 }
 
 #score {
@@ -179,7 +180,7 @@ body {
   .subtitle {
     margin-block-end: 10px;
     color: rgb(214, 53, 215);
-    font-size: 0.75em;
+    font-size: 0.875em;
     text-shadow: 0 0 8px rgb(214, 53, 215, 0.8);
     text-wrap: balance;
   }
@@ -193,6 +194,10 @@ body {
     color: white;
     font-size: 0.6875em; /* 22px on desktop, 16.5px on mobile (adjusted to match 18px) */
     text-shadow: 0 0 8px rgb(255, 255, 255, 0.8);
+
+    @media screen and (max-width: 767px) {
+      font-size: 0.6em;
+    }
   }
 
   .author a {
@@ -207,7 +212,7 @@ body {
   }
 
   @media screen and (max-width: 767px) and (orientation: landscape) {
-    font-size: 16px; /* Reduced size for mobile landscape */
+    font-size: 18px; /* Reduced size for mobile landscape */
   }
 }
 
