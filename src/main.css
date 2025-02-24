@@ -148,7 +148,7 @@ body {
 }
 
 #startDialog {
-  z-index: 3;
+  z-index: 20;
   position: absolute;
   top: 50%;
   left: 50%;
@@ -163,7 +163,7 @@ body {
   background: color-mix(in oklab, #06000b, transparent 70%);
   color: #00ffcc;
   font-weight: 700;
-  font-size: 32px;
+  font-size: 28px; /* Base size for desktop */
   line-height: 1.5;
   font-family: 'Orbitron', sans-serif;
   text-align: center;
@@ -177,38 +177,37 @@ body {
   }
 
   .subtitle {
+    margin-block-end: 10px;
     color: rgb(214, 53, 215);
+    font-size: 0.75em;
     text-shadow: 0 0 8px rgb(214, 53, 215, 0.8);
     text-wrap: balance;
+  }
+
+  .instructions {
+    margin-block: 20px;
+    font-size: 0.875em;
   }
 
   .author {
     margin-block-start: 30px;
     color: white;
-    font-size: 22px;
+    font-size: 0.6875em; /* 22px on desktop, 16.5px on mobile (adjusted to match 18px) */
+  }
 
-    a {
-      color: inherit;
-    }
+  .author a {
+    color: inherit;
   }
 
   @media screen and (max-width: 767px) {
     top: 50dvh;
     padding: 15px;
     transform: translate(-50%, -50%);
-    font-size: 24px;
+    font-size: 24px; /* Base size for mobile */
+  }
 
-    h1 {
-      font-size: 24px;
-    }
-
-    .subtitle {
-      font-size: 16px;
-    }
-
-    .author {
-      font-size: 18px;
-    }
+  @media screen and (max-width: 767px) and (orientation: landscape) {
+    font-size: 16px; /* Reduced size for mobile landscape */
   }
 }
 
@@ -220,7 +219,7 @@ body {
   background: none;
   color: #00ffcc;
   font-weight: 700;
-  font-size: 24px;
+  font-size: 0.75em; /* 24px on desktop, 18px on mobile (adjusted to match 20px) */
   font-family: 'Orbitron', sans-serif;
   text-shadow: 0 0 5px rgba(0, 255, 204, 0.8);
   cursor: pointer;
@@ -232,7 +231,6 @@ body {
 
   @media screen and (max-width: 767px) {
     padding: 10px 25px;
-    font-size: 20px;
   }
 }
 
