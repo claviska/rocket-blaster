@@ -9,11 +9,18 @@ const ASTEROID_SPAWN_MAX = 4000; // 4 seconds
 const BULLET_COLOR = '#FFBF00';
 const STARTING_ASTEROIDS = 3;
 const INCREASE_ASTEROIDS_EVERY_N_HITS = 3;
+const BLACK_HOLE_SIZE = ASTEROID_MAX_SIZE * 1.75;
+const BLACK_HOLE_GRAVITY_STRENGTH = 0.15;
+const BLACK_HOLE_ROTATION_SPEED = 0.075;
+const BLACK_HOLE_SPAWN_CHANCE = 0.005; // 0.5% chance per frame to spawn (adjust as needed)
+const BLACK_HOLE_SPAWN_MIN = 1500; // 15 seconds
+const BLACK_HOLE_SPAWN_MAX = 4500; // 45 seconds
+const BLACK_HOLE_DURATION = 10000; // 10 seconds
 const STAR_SPAWN_MIN = 45000; // 45 seconds
 const STAR_SPAWN_MAX = 75000; // 75 seconds
 const SHIELD_SPAWN_MIN = 20000; // 20 seconds
 const SHIELD_SPAWN_MAX = 50000; // 50 seconds
-const SHIELD_DURATION = 8000; // 8 seconds
+const SHIELD_DURATION = 10000; // 10 seconds
 const SHIELD_ROTATION_DURATION = 2500;
 const SHIELD_BLINK_DURATION = 2000; // 2 seconds blink warning
 const HIGH_SCORE_DEFAULT_COLOR = '#00ffcc';
@@ -77,6 +84,7 @@ const player = {
 let bullets = [];
 let asteroids = [];
 let powerUps = [];
+let blackHoles = [];
 let score = 0;
 let shotsFired = 0;
 let hits = 0;
@@ -85,6 +93,7 @@ let pendingAsteroids = [];
 let asteroidsDestroyed = 0;
 let gameStarted = false;
 let gameStartTime;
+let pendingBlackHoleSpawnTime = null;
 let pendingStarSpawnTime;
 let pendingShieldSpawnTime = null;
 let flashActive = false;
@@ -328,23 +337,29 @@ class Asteroid {
       }
       return;
     }
-    this.x += this.speed * Math.cos(this.angle);
-    this.y += this.speed * Math.sin(this.angle);
+
+    // Initialize velocities if not present
+    if (!this.velX) this.velX = this.speed * Math.cos(this.angle);
+    if (!this.velY) this.velY = this.speed * Math.sin(this.angle);
+
+    // Update position with velocity
+    this.x += this.velX;
+    this.y += this.velY;
 
     const buffer = this.hitRadius;
     if (this.x - buffer < 0) {
       this.x = buffer;
-      this.angle = Math.PI - this.angle;
+      this.velX = Math.abs(this.velX);
     } else if (this.x + buffer > canvas.width) {
       this.x = canvas.width - buffer;
-      this.angle = Math.PI - this.angle;
+      this.velX = -Math.abs(this.velX);
     }
     if (this.y - buffer < 0) {
       this.y = buffer;
-      this.angle = -this.angle;
+      this.velY = Math.abs(this.velY);
     } else if (this.y + buffer > canvas.height) {
       this.y = canvas.height - buffer;
-      this.angle = -this.angle;
+      this.velY = -Math.abs(this.velY);
     }
 
     this.rotationAngle += this.rotationSpeed;
@@ -626,23 +641,27 @@ class Star {
   }
 
   move() {
-    this.x += this.speed * Math.cos(this.angle);
-    this.y += this.speed * Math.sin(this.angle);
+    // Initialize velocities if not present
+    if (!this.velX) this.velX = this.speed * Math.cos(this.angle);
+    if (!this.velY) this.velY = this.speed * Math.sin(this.angle);
+
+    this.x += this.velX;
+    this.y += this.velY;
 
     const buffer = this.hitRadius;
     if (this.x - buffer < 0) {
       this.x = buffer;
-      this.angle = Math.PI - this.angle;
+      this.velX = Math.abs(this.velX);
     } else if (this.x + buffer > canvas.width) {
       this.x = canvas.width - buffer;
-      this.angle = Math.PI - this.angle;
+      this.velX = -Math.abs(this.velX);
     }
     if (this.y - buffer < 0) {
       this.y = buffer;
-      this.angle = -this.angle;
+      this.velY = Math.abs(this.velY);
     } else if (this.y + buffer > canvas.height) {
       this.y = canvas.height - buffer;
-      this.angle = -this.angle;
+      this.velY = -Math.abs(this.velY);
     }
 
     this.rotationAngle += this.rotationSpeed;
@@ -784,23 +803,27 @@ class Shield {
   }
 
   move() {
-    this.x += this.speed * Math.cos(this.angle);
-    this.y += this.speed * Math.sin(this.angle);
+    // Initialize velocities if not present
+    if (!this.velX) this.velX = this.speed * Math.cos(this.angle);
+    if (!this.velY) this.velY = this.speed * Math.sin(this.angle);
+
+    this.x += this.velX;
+    this.y += this.velY;
 
     const buffer = this.hitRadius;
     if (this.x - buffer < 0) {
       this.x = buffer;
-      this.angle = Math.PI - this.angle;
+      this.velX = Math.abs(this.velX);
     } else if (this.x + buffer > canvas.width) {
       this.x = canvas.width - buffer;
-      this.angle = Math.PI - this.angle;
+      this.velX = -Math.abs(this.velX);
     }
     if (this.y - buffer < 0) {
       this.y = buffer;
-      this.angle = -this.angle;
+      this.velY = Math.abs(this.velY);
     } else if (this.y + buffer > canvas.height) {
       this.y = canvas.height - buffer;
-      this.angle = -this.angle;
+      this.velY = -Math.abs(this.velY);
     }
 
     this.rotationAngle += this.rotationSpeed;
@@ -842,6 +865,197 @@ class Shield {
 
     ctx.globalAlpha = 1;
     ctx.restore();
+  }
+}
+
+class BlackHole {
+  constructor() {
+    const side = Math.floor(Math.random() * 4);
+    let x, y, angle;
+
+    switch (side) {
+      case 0:
+        x = Math.random() * canvas.width;
+        y = -10;
+        angle = Math.random() * Math.PI - Math.PI / 2;
+        break;
+      case 1:
+        x = canvas.width + 10;
+        y = Math.random() * canvas.height;
+        angle = Math.random() * Math.PI + Math.PI;
+        break;
+      case 2:
+        x = Math.random() * canvas.width;
+        y = canvas.height + 10;
+        angle = Math.random() * Math.PI + Math.PI / 2;
+        break;
+      case 3:
+        x = -10;
+        y = Math.random() * canvas.height;
+        angle = Math.random() * Math.PI;
+        break;
+    }
+    this.x = x;
+    this.y = y;
+    this.speed = (Math.random() * 2 + 1) * 0.9;
+    this.baseSize = BLACK_HOLE_SIZE; // Base size before pulsing
+    this.size = this.baseSize; // Current size, now fixed
+    this.angle = angle;
+    this.baseHitRadius = this.baseSize * 1.2; // Base hit radius for visuals
+    this.hitRadius = this.baseHitRadius; // Current hit radius for visuals, now fixed
+    this.collisionRadius = this.baseHitRadius * 0.1; // Collision radius is 10% of base hit radius
+    this.rotationAngle = 0;
+    this.rotationSpeed = BLACK_HOLE_ROTATION_SPEED;
+    this.spawnTime = Date.now();
+    this.gracePeriod = 2000;
+    this.fadeInDuration = 1000;
+    this.scale = 0;
+    this.opacity = 0;
+    this.lifeTime = BLACK_HOLE_DURATION;
+    this.fadeOutDuration = 1000; // 1 second fade out
+  }
+
+  move() {
+    this.x += this.speed * Math.cos(this.angle);
+    this.y += this.speed * Math.sin(this.angle);
+
+    const buffer = this.hitRadius; // Use visual hit radius for boundary
+    if (this.x - buffer < 0) {
+      this.x = buffer;
+      this.angle = Math.PI - this.angle;
+    } else if (this.x + buffer > canvas.width) {
+      this.x = canvas.width - buffer;
+      this.angle = Math.PI - this.angle;
+    }
+    if (this.y - buffer < 0) {
+      this.y = buffer;
+      this.angle = -this.angle;
+    } else if (this.y + buffer > canvas.height) {
+      this.y = canvas.height - buffer;
+      this.angle = -this.angle;
+    }
+
+    this.rotationAngle += this.rotationSpeed;
+
+    const elapsed = Date.now() - this.spawnTime;
+    if (elapsed < this.fadeInDuration) {
+      this.scale = Math.min(1, elapsed / this.fadeInDuration);
+      this.opacity = Math.min(1, elapsed / this.fadeInDuration);
+    } else if (elapsed > this.lifeTime - this.fadeOutDuration) {
+      const fadeOutTime = elapsed - (this.lifeTime - this.fadeOutDuration);
+      this.scale = Math.max(0, 1 - fadeOutTime / this.fadeOutDuration);
+      this.opacity = Math.max(0, 1 - fadeOutTime / this.fadeOutDuration);
+    } else {
+      this.scale = 1;
+      this.opacity = 1;
+    }
+
+    if (elapsed > this.lifeTime) {
+      const index = blackHoles.indexOf(this);
+      if (index !== -1) {
+        blackHoles.splice(index, 1);
+        // Set the next spawn time to be between BLACK_HOLE_SPAWN_MIN and BLACK_HOLE_SPAWN_MAX from NOW
+        pendingBlackHoleSpawnTime =
+          Date.now() + Math.random() * (BLACK_HOLE_SPAWN_MAX - BLACK_HOLE_SPAWN_MIN) + BLACK_HOLE_SPAWN_MIN;
+      }
+    }
+
+    // Size and hitRadius remain constant at their base values
+    this.size = this.baseSize;
+    this.hitRadius = this.baseHitRadius;
+    this.collisionRadius = this.baseHitRadius * 0.1;
+  }
+
+  draw() {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rotationAngle);
+    ctx.scale(this.scale, this.scale); // Fade-in scale only
+    ctx.globalAlpha = this.opacity;
+
+    // Define the cycle duration for orange to red and back
+    const cycleDuration = 2000; // 2 seconds for full cycle (orange -> red -> orange)
+    const time = Date.now() % cycleDuration; // Current position in cycle
+    const t = time / (cycleDuration / 2); // Normalized time (0 to 2)
+
+    // Define the two distinct colors
+    const orange = { r: 255, g: 165, b: 0 }; // #FFA500
+    const red = { r: 255, g: 0, b: 0 }; // #FF0000
+
+    let r, g, b;
+
+    // Interpolate between orange and red, then back
+    if (t < 1) {
+      // Orange to Red (0 to 1)
+      const factor = t; // 0 to 1
+      r = Math.round(orange.r + (red.r - orange.r) * factor);
+      g = Math.round(orange.g + (red.g - orange.g) * factor);
+      b = Math.round(orange.b + (red.b - orange.b) * factor);
+    } else {
+      // Red to Orange (1 to 2)
+      const factor = 2 - t; // 1 to 0
+      r = Math.round(orange.r + (red.r - orange.r) * factor);
+      g = Math.round(orange.g + (red.g - orange.g) * factor);
+      b = Math.round(orange.b + (red.b - orange.b) * factor);
+    }
+
+    const strokeColor = `rgb(${r}, ${g}, ${b})`;
+
+    // Draw solid spiral extending to current hit radius
+    ctx.beginPath();
+    const maxRadius = this.hitRadius; // Use visual hit radius for drawing
+    for (let r = 0; r <= maxRadius; r += 0.5) {
+      const angle = r * 0.3; // Spiral tightness
+      const x = Math.cos(angle) * r;
+      const y = Math.sin(angle) * r;
+      if (r === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = strokeColor; // Use the smoothly transitioning color
+    ctx.lineWidth = 5;
+    ctx.stroke();
+
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  canCollide() {
+    return Date.now() - this.spawnTime >= this.gracePeriod;
+  }
+
+  applyGravity(obj) {
+    const dx = this.x - obj.x;
+    const dy = this.y - obj.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const gravityRadius = this.hitRadius * 3; // Gravity affects objects within 3x visual hit radius
+
+    if (distance < gravityRadius && distance > 0) {
+      const force = (BLACK_HOLE_GRAVITY_STRENGTH * 100) / distance;
+      const forceX = (dx / distance) * force;
+      const forceY = (dy / distance) * force;
+
+      if (obj instanceof Asteroid || obj instanceof Star || obj instanceof Shield) {
+        if (!obj.velX) obj.velX = 0;
+        if (!obj.velY) obj.velY = 0;
+        obj.velX += forceX;
+        obj.velY += forceY;
+      } else if (obj === player) {
+        obj.velX += forceX;
+        obj.velY += forceY;
+      } else if (obj instanceof Bullet) {
+        // Convert current velocity to components
+        let velX = obj.speed * Math.cos(obj.angle);
+        let velY = obj.speed * Math.sin(obj.angle);
+
+        // Apply gravitational force
+        velX += forceX;
+        velY += forceY;
+
+        // Update bullet speed and angle based on new velocity
+        obj.speed = Math.sqrt(velX * velX + velY * velY);
+        obj.angle = Math.atan2(velY, velX);
+      }
+    }
   }
 }
 
@@ -990,6 +1204,8 @@ async function startGame() {
   startDialog.style.display = 'none';
   gameStartTime = Date.now();
   timerDisplay.textContent = '0:00';
+  pendingBlackHoleSpawnTime =
+    Date.now() + Math.random() * (BLACK_HOLE_SPAWN_MAX - BLACK_HOLE_SPAWN_MIN) + BLACK_HOLE_SPAWN_MIN;
   pendingStarSpawnTime = Date.now() + Math.random() * (STAR_SPAWN_MAX - STAR_SPAWN_MIN) + STAR_SPAWN_MIN;
   pendingShieldSpawnTime = Date.now() + Math.random() * (SHIELD_SPAWN_MAX - SHIELD_SPAWN_MIN) + SHIELD_SPAWN_MIN;
 }
@@ -1012,6 +1228,7 @@ function restartGame() {
     .fill()
     .map(() => new Asteroid());
   powerUps = [];
+  blackHoles = [];
   pendingAsteroids = [];
   score = 0;
   shotsFired = 0;
@@ -1021,6 +1238,8 @@ function restartGame() {
   gameOverDisplay.style.display = 'none';
   gameStartTime = Date.now();
   timerDisplay.textContent = '0:00';
+  pendingBlackHoleSpawnTime =
+    Date.now() + Math.random() * (BLACK_HOLE_SPAWN_MAX - BLACK_HOLE_SPAWN_MIN) + BLACK_HOLE_SPAWN_MIN;
   pendingStarSpawnTime = Date.now() + STAR_SPAWN_MIN + Math.random() * (STAR_SPAWN_MAX - STAR_SPAWN_MIN);
   pendingShieldSpawnTime = Date.now() + SHIELD_SPAWN_MIN + Math.random() * (SHIELD_SPAWN_MAX - SHIELD_SPAWN_MIN);
   playSound('game-start');
@@ -1176,9 +1395,9 @@ function update() {
         bullets.push(new Bullet(noseX, noseY, player.angle));
         playSound('shoot');
         shotsFired++;
-        player.lastShotTime = currentTime; // Update last shot time
-        keys[' '] = false; // Reset key state
-        touchState.shoot = false; // Reset touch state
+        player.lastShotTime = currentTime;
+        keys[' '] = false;
+        touchState.shoot = false;
         player.shootScale = 1.15;
         player.shootTimer = 10;
       }
@@ -1241,6 +1460,34 @@ function update() {
       }
     }
 
+    // Player-black hole collision
+    if (!player.exploded) {
+      for (let i = 0; i < blackHoles.length; i++) {
+        if (Date.now() - gameStartTime > 3000 && blackHoles[i].canCollide()) {
+          const dx = player.x - blackHoles[i].x;
+          const dy = player.y - blackHoles[i].y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          if (distance < player.hitRadius + blackHoles[i].collisionRadius) {
+            if (player.hasShield) {
+              blackHoles.splice(i, 1);
+              playSound('asteroid-explode');
+              score += 100;
+              break;
+            } else {
+              player.exploded = true;
+              playSound('game-over'); // Play the rocket's explosion sound
+              // Remove explosion pieces to skip animation
+              player.pieces = []; // Ensure no pieces are drawn
+              shakeCanvas(); // Keep the shake for feedback
+              bullets = [];
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // Player-asteroid collision
     if (!player.exploded) {
       for (let i = 0; i < asteroids.length; i++) {
         if (Date.now() - gameStartTime > 3000 && asteroids[i].canCollide() && !asteroids[i].exploded) {
@@ -1249,7 +1496,6 @@ function update() {
           const distance = Math.sqrt(dx * dx + dy * dy);
           if (distance < player.hitRadius + asteroids[i].hitRadius) {
             if (player.hasShield) {
-              // Destroy asteroid instead of player
               asteroids[i].exploded = true;
               asteroids[i].pieces = [];
               for (let k = 0; k < 8; k++) {
@@ -1271,7 +1517,6 @@ function update() {
                 pendingAsteroids.push({ spawnTime: Date.now() + delay });
               }
             } else {
-              // Explosion code
               player.exploded = true;
               playSound('game-over');
               for (let j = 0; j < 20; j++) {
@@ -1280,7 +1525,6 @@ function update() {
                 player.pieces.push(new ExplosionPiece(player.x, player.y, angle, size));
               }
               shakeCanvas();
-              // Clear all bullets when player explodes
               bullets = [];
             }
             break;
@@ -1289,6 +1533,7 @@ function update() {
       }
     }
 
+    // Player-power up collision
     if (!player.exploded) {
       for (let i = 0; i < powerUps.length; i++) {
         const p = powerUps[i];
@@ -1297,7 +1542,6 @@ function update() {
         const distance = Math.sqrt(dx * dx + dy * dy);
         if (distance < player.hitRadius + p.hitRadius) {
           if (p instanceof Shield) {
-            // Shield power up
             player.hasShield = true;
             player.shieldStartTime = Date.now();
             player.shieldVisible = true;
@@ -1306,7 +1550,6 @@ function update() {
             powerUps.splice(i, 1);
             score += 100;
           } else if (p instanceof Star) {
-            // Star power up
             let destroyedCount = 0;
             asteroids.forEach(a => {
               if (!a.exploded) {
@@ -1322,6 +1565,15 @@ function update() {
                 hits++;
               }
             });
+            // Remove all black holes
+            if (blackHoles.length > 0) {
+              blackHoles = []; // Clear all black holes
+              playSound('black-hole-destroy'); // Play sound for black hole destruction
+              score += 500; // Bonus points for removing black holes
+              // Reset the black hole spawn timer
+              pendingBlackHoleSpawnTime =
+                Date.now() + Math.random() * (BLACK_HOLE_SPAWN_MAX - BLACK_HOLE_SPAWN_MIN) + BLACK_HOLE_SPAWN_MIN;
+            }
             score += destroyedCount * 50 + 1000;
             powerUps.splice(i, 1);
             asteroids = asteroids.filter(a => a.exploded && a.explosionLife > 0);
@@ -1339,10 +1591,41 @@ function update() {
         }
       }
     }
+
+    // Asteroid-black hole collision
+    if (blackHoles.length > 0) {
+      for (let i = blackHoles.length - 1; i >= 0; i--) {
+        const bh = blackHoles[i];
+        if (bh.canCollide()) {
+          for (let j = asteroids.length - 1; j >= 0; j--) {
+            const asteroid = asteroids[j];
+            if (!asteroid.exploded) {
+              const dx = asteroid.x - bh.x;
+              const dy = asteroid.y - bh.y;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+              if (distance < asteroid.hitRadius + bh.collisionRadius) {
+                asteroids.splice(j, 1);
+                playSound('black-hole-destroy');
+
+                // Spawn a new asteroid like when shot by the player
+                const delay = Math.random() * (ASTEROID_SPAWN_MAX - ASTEROID_SPAWN_MIN) + ASTEROID_SPAWN_MIN;
+                pendingAsteroids.push({ spawnTime: Date.now() + delay });
+
+                asteroidsDestroyed += 1; // Increment total destroyed asteroids
+                if (asteroidsDestroyed % INCREASE_ASTEROIDS_EVERY_N_HITS === 0) {
+                  const extraDelay = Math.random() * (ASTEROID_SPAWN_MAX - ASTEROID_SPAWN_MIN) + ASTEROID_SPAWN_MIN;
+                  pendingAsteroids.push({ spawnTime: Date.now() + extraDelay });
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
 
   const now = Date.now();
-  // Shield spawning - only spawn if enough time has passed since game start
+  // Shield spawning
   if (gameStarted && now >= pendingShieldSpawnTime && now - gameStartTime >= SHIELD_SPAWN_MIN) {
     powerUps.push(new Shield());
     playSound('power-up-spawn');
@@ -1356,6 +1639,18 @@ function update() {
     pendingStarSpawnTime = now + Math.random() * (STAR_SPAWN_MAX - STAR_SPAWN_MIN) + STAR_SPAWN_MIN;
   }
 
+  // Black hole spawning
+  if (
+    gameStarted &&
+    blackHoles.length === 0 &&
+    pendingBlackHoleSpawnTime !== null &&
+    now >= pendingBlackHoleSpawnTime
+  ) {
+    blackHoles.push(new BlackHole());
+    playSound('black-hole-spawn');
+    pendingBlackHoleSpawnTime = null; // Reset until next despawn sets it
+  }
+
   pendingAsteroids = pendingAsteroids.filter(pending => {
     if (now >= pending.spawnTime) {
       asteroids.push(new Asteroid());
@@ -1364,46 +1659,87 @@ function update() {
     return true;
   });
 
+  // Asteroid-asteroid collisions
   for (let i = 0; i < asteroids.length; i++) {
     if (asteroids[i].exploded) continue;
     for (let j = i + 1; j < asteroids.length; j++) {
       if (asteroids[j].exploded) continue;
-      const dx = asteroids[i].x - asteroids[j].x;
-      const dy = asteroids[i].y - asteroids[j].y;
+
+      const a1 = asteroids[i];
+      const a2 = asteroids[j];
+      const dx = a1.x - a2.x;
+      const dy = a1.y - a2.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
-      const minDistance = asteroids[i].hitRadius + asteroids[j].hitRadius;
+      const minDistance = a1.hitRadius + a2.hitRadius;
 
       if (distance < minDistance) {
+        // Normalize collision normal
         const nx = dx / distance;
         const ny = dy / distance;
-        const relVelX =
-          asteroids[i].speed * Math.cos(asteroids[i].angle) - asteroids[j].speed * Math.cos(asteroids[j].angle);
-        const relVelY =
-          asteroids[i].speed * Math.sin(asteroids[i].angle) - asteroids[j].speed * Math.sin(asteroids[j].angle);
-        const impulse = (2 * (relVelX * nx + relVelY * ny)) / 2;
-        const angleI = Math.atan2(
-          asteroids[i].speed * Math.sin(asteroids[i].angle) - impulse * ny,
-          asteroids[i].speed * Math.cos(asteroids[i].angle) - impulse * nx
-        );
-        const angleJ = Math.atan2(
-          asteroids[j].speed * Math.sin(asteroids[j].angle) + impulse * ny,
-          asteroids[j].speed * Math.cos(asteroids[j].angle) + impulse * nx
-        );
-        asteroids[i].angle = angleI;
-        asteroids[j].angle = angleJ;
-        const overlap = minDistance - distance;
-        const pushX = (nx * overlap) / 2;
-        const pushY = (ny * overlap) / 2;
-        asteroids[i].x += pushX;
-        asteroids[i].y += pushY;
-        asteroids[j].x -= pushX;
-        asteroids[j].y -= pushY;
+
+        // Ensure velocities are initialized
+        if (!a1.velX) a1.velX = a1.speed * Math.cos(a1.angle);
+        if (!a1.velY) a1.velY = a1.speed * Math.sin(a1.angle);
+        if (!a2.velX) a2.velX = a2.speed * Math.cos(a2.angle);
+        if (!a2.velY) a2.velY = a2.speed * Math.sin(a2.angle);
+
+        // Relative velocity
+        const relVelX = a1.velX - a2.velX;
+        const relVelY = a1.velY - a2.velY;
+
+        // Velocity component along the normal
+        const velAlongNormal = relVelX * nx + relVelY * ny;
+
+        // If asteroids are moving away, skip collision response
+        if (velAlongNormal > 0) continue;
+
+        // Approximate mass as proportional to size (area ~ size^2)
+        const mass1 = a1.size * a1.size;
+        const mass2 = a2.size * a2.size;
+
+        // Elastic collision impulse (coefficient of restitution = 1 for perfect elasticity)
+        const impulse = (2 * velAlongNormal) / (mass1 + mass2);
+        const impulseX = impulse * nx;
+        const impulseY = impulse * ny;
+
+        // Update velocities
+        a1.velX -= impulseX * mass2;
+        a1.velY -= impulseY * mass2;
+        a2.velX += impulseX * mass1;
+        a2.velY += impulseY * mass1;
+
+        // Update speed and angle based on new velocities
+        a1.speed = Math.sqrt(a1.velX * a1.velX + a1.velY * a1.velY);
+        a1.angle = Math.atan2(a1.velY, a1.velX);
+        a2.speed = Math.sqrt(a2.velX * a2.velX + a2.velY * a2.velY);
+        a2.angle = Math.atan2(a2.velY, a2.velX);
+
+        // Position correction to prevent sticking
+        const overlap = (minDistance - distance) * 0.5; // Split overlap evenly
+        const correctionX = nx * overlap;
+        const correctionY = ny * overlap;
+        a1.x += correctionX;
+        a1.y += correctionY;
+        a2.x -= correctionX;
+        a2.y -= correctionY;
       }
     }
   }
 
+  // Apply black hole gravity
+  blackHoles.forEach(bh => {
+    asteroids.forEach(a => {
+      if (!a.exploded) bh.applyGravity(a);
+    });
+    powerUps.forEach(p => bh.applyGravity(p));
+    bullets.forEach(b => bh.applyGravity(b));
+    if (!player.exploded) bh.applyGravity(player);
+  });
+
+  // Update positions
   asteroids.forEach(a => a.move());
   powerUps.forEach(p => p.move());
+  blackHoles.forEach(bh => bh.move());
 }
 
 function formatTime(milliseconds) {
@@ -1451,6 +1787,7 @@ function draw() {
   drawStars();
   asteroids.forEach(a => a.draw());
   powerUps.forEach(p => p.draw());
+  blackHoles.forEach(bh => bh.draw());
   drawPlayer();
   bullets.forEach(b => b.draw());
   scoreDisplay.textContent = `Score: ${score}`;
@@ -1551,6 +1888,8 @@ async function preloadSounds() {
   const soundFiles = {
     'asteroid-explode': 'sounds/asteroid-explode.mp3',
     'asteroid-spawn': 'sounds/asteroid-spawn.mp3',
+    'black-hole-destroy': 'sounds/black-hole-destroy.mp3',
+    'black-hole-spawn': 'sounds/black-hole-spawn.mp3',
     'game-over': 'sounds/game-over.mp3',
     'game-start': 'sounds/game-start.mp3',
     'power-up-spawn': 'sounds/power-up-spawn.mp3',
@@ -1719,6 +2058,7 @@ document.addEventListener('visibilitychange', () => {
     gameStartTime += pauseDuration;
     pendingStarSpawnTime += pauseDuration;
     pendingShieldSpawnTime += pauseDuration;
+    pendingBlackHoleSpawnTime += pauseDuration;
     if (player.hasShield) player.shieldStartTime += pauseDuration;
     if (flashActive) flashStartTime += pauseDuration;
     if (isShaking) shakeStartTime += pauseDuration;
