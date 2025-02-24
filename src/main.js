@@ -903,7 +903,7 @@ class BlackHole {
     }
     this.x = x;
     this.y = y;
-    this.speed = (Math.random() * 2 + 1) * 0.9;
+    this.speed = (Math.random() * 2 + 1) * 0.45;
     this.baseSize = BLACK_HOLE_SIZE; // Base size before pulsing
     this.size = this.baseSize; // Current size, now fixed
     this.angle = angle;
