@@ -2088,9 +2088,6 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-window.addEventListener('blur', () => pauseGame());
-window.addEventListener('focus', () => resumeGame());
-
 if (savedSoundState !== null) {
   isSoundEnabled = savedSoundState === 'true';
   soundToggle.classList.toggle('muted', !isSoundEnabled);
