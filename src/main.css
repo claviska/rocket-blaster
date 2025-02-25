@@ -118,7 +118,6 @@ canvas {
 }
 
 #soundToggle {
-  display: flex;
   z-index: 10;
   position: absolute;
   top: 80px;
@@ -131,10 +130,6 @@ canvas {
   border-radius: 9999px;
   background: none;
   color: #00ffcc;
-  font: inherit;
-  font-size: 24px;
-  font-family: 'Orbitron', sans-serif;
-  text-shadow: 0 0 5px rgba(0, 255, 204, 0.8);
   cursor: pointer;
   transition: color 0.3s ease;
 
@@ -144,8 +139,8 @@ canvas {
   }
 
   .icon {
-    width: 40px;
-    height: 40px;
+    width: 30px;
+    height: 30px;
   }
 
   &.muted .icon-volume,
