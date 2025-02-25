@@ -17,7 +17,7 @@ canvas {
   margin: 0;
   background: black;
 
-  @media screen and (max-width: 767px) {
+  @media screen and (max-width: 896px) {
     width: 200vw;
     height: 200dvh;
   }
@@ -161,7 +161,7 @@ canvas {
   text-align: center;
   text-shadow: 0 0 10px rgba(255, 51, 102, 0.8);
 
-  @media screen and (max-width: 767px) {
+  @media screen and (max-width: 896px) {
     top: 50dvh; /* Center relative to viewport height */
     transform: translate(-50%, -50%);
   }
@@ -195,7 +195,7 @@ canvas {
     text-shadow: 0 0 8px rgb(2, 183, 255, 0.8);
     text-wrap: balance;
 
-    @media screen and (max-width: 767px) {
+    @media screen and (max-width: 896px) {
       font-size: 1.25em;
     }
   }
@@ -218,7 +218,7 @@ canvas {
     font-size: 0.6875em; /* 22px on desktop, 16.5px on mobile (adjusted to match 18px) */
     text-shadow: 0 0 8px rgb(255, 255, 255, 0.8);
 
-    @media screen and (max-width: 767px) {
+    @media screen and (max-width: 896px) {
       font-size: 0.6em;
     }
   }
@@ -227,14 +227,14 @@ canvas {
     color: inherit;
   }
 
-  @media screen and (max-width: 767px) {
+  @media screen and (max-width: 896px) {
     top: 50dvh;
     padding: 15px;
     transform: translate(-50%, -50%);
     font-size: 24px; /* Base size for mobile */
   }
 
-  @media screen and (max-width: 767px) and (orientation: landscape) {
+  @media screen and (max-width: 896px) and (orientation: landscape) {
     font-size: 18px; /* Reduced size for mobile landscape */
   }
 }
@@ -259,7 +259,7 @@ canvas {
     translate: 0 2px;
   }
 
-  @media screen and (max-width: 767px) {
+  @media screen and (max-width: 896px) {
     padding: 10px 25px;
   }
 }
@@ -325,6 +325,58 @@ canvas {
   transform: translateX(calc(var(--switch-height) * 0.923)); /* 1.5em / 1.625em ≈ 0.923 (24px:26px) */
   background: #00ffcc;
   box-shadow: 0 0 calc(var(--switch-height) * 0.308) #00ffcc; /* 0.5em / 1.625em ≈ 0.308 (8px:26px) */
+}
+
+.color-selector {
+  display: flex;
+  justify-content: center;
+  margin-block: 20px;
+  gap: 10px;
+}
+
+.color-option {
+  display: inline-block;
+  position: relative;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.color-option input[type='radio'] {
+  appearance: none;
+  -webkit-appearance: none;
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+
+.color-circle {
+  display: block;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 2px color-mix(in oklab, black, transparent 75%),
+    inset 0 -5px 10px rgba(0, 0, 0, 0.33),
+    inset 0 5px 10px rgba(255, 255, 255, 0.25),
+    0 2px 4px rgba(0, 0, 0, 0.1);
+
+  @media screen and (max-width: 896px) {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.color-option input[type='radio']:checked + .color-circle {
+  transform: scale(1.1);
+  outline: 3px solid;
+  outline-color: inherit; /* Matches the background color */
+  outline-offset: 2px;
+}
+
+.color-option input[type='radio']:focus-visible + .color-circle {
+  outline: dashed 3px #00ffcc;
+  outline-offset: 4px;
 }
 
 #touchControls {

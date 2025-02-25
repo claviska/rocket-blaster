@@ -1,4 +1,13 @@
-const ROCKET_COLOR = '#00B7FF';
+const ROCKET_COLORS = {
+  red: '#ff4d4d',
+  amber: '#ffbf00',
+  green: '#00cc00',
+  blue: '#00b7ff',
+  purple: '#9900cc',
+  pink: '#ff66b2',
+  gray: '#686868'
+};
+let ROCKET_COLOR = ROCKET_COLORS.blue;
 const ROCKET_ACCENT = '#FFFFFF';
 const THRUST_COLORS = ['#FF6B00', '#FF9500', '#FFC107'];
 const ASTEROID_COLORS = ['#de3333', '#20afa5', '#24a3c0', '#2fba79', '#e5cb64', '#b818b8'];
@@ -1259,6 +1268,7 @@ function drawPlayer() {
 
 async function startGame() {
   startDialog.style.display = 'none';
+  startDialog.inert = true;
   await unlockAudioContext();
   playSound('game-start');
   gameStarted = true;
@@ -2117,15 +2127,34 @@ function toggleSound() {
   }
 }
 
-// Load zero gravity preference from localStorage
-const savedGravityState = localStorage.getItem('zeroGravity');
-if (savedGravityState !== null) {
-  zeroGravityToggle.checked = savedGravityState === 'true';
+function loadSettings() {
+  // Load zero gravity preference
+  const savedGravityState = localStorage.getItem('zeroGravity');
+  if (savedGravityState !== null) {
+    zeroGravityToggle.checked = savedGravityState === 'true';
+  }
+
+  // Load rocket color preference
+  const savedColor = localStorage.getItem('rocketColor') || 'blue';
+  ROCKET_COLOR = ROCKET_COLORS[savedColor] || ROCKET_COLORS.blue;
+  const rocketColorInputs = document.querySelectorAll('input[name="rocketColor"]');
+  rocketColorInputs.forEach(input => {
+    input.checked = input.value === savedColor;
+  });
 }
 
 // Save zero gravity state when changed
 zeroGravityToggle.addEventListener('change', () => {
   localStorage.setItem('zeroGravity', zeroGravityToggle.checked);
+});
+
+// Color selector
+document.querySelectorAll('input[name="rocketColor"]').forEach(input => {
+  input.addEventListener('change', () => {
+    const selectedColor = input.value;
+    ROCKET_COLOR = ROCKET_COLORS[selectedColor];
+    localStorage.setItem('rocketColor', selectedColor);
+  });
 });
 
 window.addEventListener('resize', () => {
@@ -2164,6 +2193,7 @@ window.addEventListener('load', () => {
   soundToggle.classList.toggle('muted', !isSoundEnabled);
 
   // Initialize other components
+  loadSettings();
   initSoundToggle();
   updateHighScore();
 });

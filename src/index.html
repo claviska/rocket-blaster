@@ -62,10 +62,36 @@
     <div id="startDialog">
       <h1>Rocket Blaster</h1>
       <div class="subtitle">Destroy asteroids and avoid black holes</div>
-      <div class="instructions">
-        Move: arrows<br />
-        Shoot: space<br />
-        <span class="keyboard-only">Tracer: shift</span>
+      <div class="instructions">Use arrows to move & space to shoot<br /></div>
+      <div class="color-selector">
+        <label class="color-option">
+          <input type="radio" name="rocketColor" value="red" />
+          <span class="color-circle" style="background-color: #ff4d4d"></span>
+        </label>
+        <label class="color-option">
+          <input type="radio" name="rocketColor" value="amber" />
+          <span class="color-circle" style="background-color: #ffbf00"></span>
+        </label>
+        <label class="color-option">
+          <input type="radio" name="rocketColor" value="green" />
+          <span class="color-circle" style="background-color: #00cc00"></span>
+        </label>
+        <label class="color-option">
+          <input type="radio" name="rocketColor" value="blue" checked />
+          <span class="color-circle" style="background-color: #02b7ff"></span>
+        </label>
+        <label class="color-option">
+          <input type="radio" name="rocketColor" value="purple" />
+          <span class="color-circle" style="background-color: #9900cc"></span>
+        </label>
+        <label class="color-option">
+          <input type="radio" name="rocketColor" value="pink" />
+          <span class="color-circle" style="background-color: #ff66b2"></span>
+        </label>
+        <label class="color-option">
+          <input type="radio" name="rocketColor" value="gray" />
+          <span class="color-circle" style="background-color: #686868"></span>
+        </label>
       </div>
       <label class="gravity-label"><input type="checkbox" id="zeroGravityToggle" /> Zero G</label>
       <button id="startButton" class="game-button">Start Game</button>

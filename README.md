@@ -18,5 +18,4 @@ npm start
 
 ## Ideas
 
-- [ ] ability to select rocket color
 - [ ] add power up like shield but it lets you shoot a spread of 3-5 bullets instead of one until it runs out
