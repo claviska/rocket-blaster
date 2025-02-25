@@ -18,5 +18,5 @@ npm start
 
 ## Ideas
 
-- [ ] add color slider to select ship color (saved to localStorage; reset button)
+- [ ] ability to select rocket color
 - [ ] add power up like shield but it lets you shoot a spread of 3-5 bullets instead of one until it runs out
