@@ -100,7 +100,8 @@ const player = {
   shieldVisible: true,
   lastShotTime: 0,
   shootCooldown: 200, // min delay between shots,
-  shieldExpireSoundPlayed: false
+  shieldExpireSoundPlayed: false,
+  lastBumpSoundTime: 0
 };
 
 let backgroundCycleStartTime = Date.now();
@@ -1454,19 +1455,30 @@ function update() {
     player.y += player.velY;
 
     // Boundary checks with bounce
+    let playBumpSound = false;
     if (player.x - player.hitRadius < 0) {
       player.x = player.hitRadius;
       player.velX = Math.abs(player.velX);
+      playBumpSound = true;
     } else if (player.x + player.hitRadius > canvas.width) {
       player.x = canvas.width - player.hitRadius;
       player.velX = -Math.abs(player.velX);
+      playBumpSound = true;
     }
     if (player.y - player.hitRadius < 0) {
       player.y = player.hitRadius;
       player.velY = Math.abs(player.velY);
+      playBumpSound = true;
     } else if (player.y + player.hitRadius > canvas.height) {
       player.y = canvas.height - player.hitRadius;
       player.velY = -Math.abs(player.velY);
+      playBumpSound = true;
+    }
+
+    if (playBumpSound && Date.now() - (player.lastBumpSoundTime || 0) >= 200) {
+      // 200ms cooldown
+      playSound('bump');
+      player.lastBumpSoundTime = Date.now();
     }
 
     // Thrust animation during acceleration, deceleration, or turning
@@ -2048,6 +2060,7 @@ async function preloadSounds() {
     'asteroid-spawn': 'sounds/asteroid-spawn.mp3',
     'black-hole-destroy': 'sounds/black-hole-destroy.mp3',
     'black-hole-spawn': 'sounds/black-hole-spawn.mp3',
+    bump: 'sounds/bump.mp3',
     click: 'sounds/click.mp3',
     'game-over': 'sounds/game-over.mp3',
     'game-start': 'sounds/game-start.mp3',
