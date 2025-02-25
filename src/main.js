@@ -1249,10 +1249,10 @@ function drawPlayer() {
 }
 
 async function startGame() {
-  await unlockAudioContext();
-  gameStarted = true;
-  playSound('game-start');
   startDialog.style.display = 'none';
+  await unlockAudioContext();
+  playSound('game-start');
+  gameStarted = true;
   gameStartTime = Date.now();
   timerDisplay.textContent = '0:00';
   pendingBlackHoleSpawnTime =
