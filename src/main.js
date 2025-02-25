@@ -31,6 +31,13 @@ const TRACER_LENGTH = 350; // Length of the tracer in pixels
 const TRACER_COLOR = '#FFBF00'; // Tracer color, matching BULLET_COLOR by default
 const TRACER_DASH_SIZE = 8; // Size of dashes and gaps in pixels
 const TRACER_WIDTH = 1.5;
+const BACKGROUND_CYCLE_DURATION = 28000; // number of milliseconds per transition
+const BACKGROUND_COLORS = [
+  { top: '#06000b', bottom: '#1c042f' }, // Original dark blue to purple
+  { top: '#06000b', bottom: '#001133' }, // navy blue
+  { top: '#06000b', bottom: '#090216' }, // midnight
+  { top: '#06000b', bottom: '#1b0212' } // rose
+];
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -86,6 +93,8 @@ const player = {
   shieldExpireSoundPlayed: false
 };
 
+let backgroundCycleStartTime = Date.now();
+let currentBackgroundIndex = 0;
 let bullets = [];
 let asteroids = [];
 let powerUps = [];
@@ -1827,11 +1836,9 @@ function formatTime(milliseconds) {
 function draw() {
   ctx.save(); // Save the context state before applying transformations
 
-  // Apply shake effect if active
   if (isShaking) {
     const elapsed = Date.now() - shakeStartTime;
     if (elapsed < shakeDuration) {
-      // Calculate diminishing shake intensity
       const progress = elapsed / shakeDuration;
       const currentIntensity = shakeIntensity * (1 - progress);
       const offsetX = (Math.random() - 0.5) * 2 * currentIntensity;
@@ -1842,10 +1849,44 @@ function draw() {
     }
   }
 
-  // Create a gradient for the background
+  // Calculate background color transition
+  const totalCycleDuration = BACKGROUND_CYCLE_DURATION * BACKGROUND_COLORS.length; // Total time for all transitions
+  const elapsedTotalTime = Date.now() - backgroundCycleStartTime;
+  const totalProgress = (elapsedTotalTime % totalCycleDuration) / totalCycleDuration; // 0 to 1 over full cycle
+
+  // Determine current and next color pair indices
+  const segmentProgress = totalProgress * BACKGROUND_COLORS.length; // Progress across all segments
+  const currentIndex = Math.floor(segmentProgress);
+  const nextIndex = (currentIndex + 1) % BACKGROUND_COLORS.length;
+  const transitionProgress = segmentProgress - currentIndex; // 0 to 1 within current segment
+
+  const currentColors = BACKGROUND_COLORS[currentIndex];
+  const nextColors = BACKGROUND_COLORS[nextIndex];
+
+  // Function to interpolate between two hex colors
+  const interpolateColor = (color1, color2, factor) => {
+    const r1 = parseInt(color1.slice(1, 3), 16);
+    const g1 = parseInt(color1.slice(3, 5), 16);
+    const b1 = parseInt(color1.slice(5, 7), 16);
+    const r2 = parseInt(color2.slice(1, 3), 16);
+    const g2 = parseInt(color2.slice(3, 5), 16);
+    const b2 = parseInt(color2.slice(5, 7), 16);
+
+    const r = Math.round(r1 + (r2 - r1) * factor);
+    const g = Math.round(g1 + (g2 - g1) * factor);
+    const b = Math.round(b1 + (b2 - b1) * factor);
+
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  };
+
+  // Calculate current colors
+  const currentTop = interpolateColor(currentColors.top, nextColors.top, transitionProgress);
+  const currentBottom = interpolateColor(currentColors.bottom, nextColors.bottom, transitionProgress);
+
+  // Create and apply the gradient
   const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  gradient.addColorStop(0, '#06000b'); // Dark blue at the top
-  gradient.addColorStop(1, '#1c042f'); // Lighter blue at the bottom
+  gradient.addColorStop(0, currentTop);
+  gradient.addColorStop(1, currentBottom);
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
