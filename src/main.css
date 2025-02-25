@@ -28,7 +28,7 @@ canvas {
 }
 
 :focus-visible {
-  outline: dotted 3px #00ffcc;
+  outline: dashed 3px #00ffcc;
   outline-offset: 3px;
 }
 
