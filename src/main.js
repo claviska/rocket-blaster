@@ -2071,37 +2071,13 @@ async function preloadSounds() {
 
 function initSoundToggle() {
   const soundToggle = document.getElementById('soundToggle');
-  let touchStartTime = 0;
 
-  // Use a single handler for both touch and click
-  function handleSoundToggle(e) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    // Prevent double-firing on touch devices
-    if (e.type === 'touchend') {
-      const touchEndTime = Date.now();
-      if (touchEndTime - touchStartTime < 500) {
-        // Within 500ms
-        toggleSound();
-        unlockAudioContext();
-      }
-    } else if (e.type === 'click') {
-      // Only handle click if not a touch device
-      if (!('ontouchstart' in window)) {
-        toggleSound();
-        unlockAudioContext();
-      }
-    }
-  }
-
-  soundToggle.addEventListener('touchstart', e => {
-    e.preventDefault();
-    touchStartTime = Date.now();
+  soundToggle.addEventListener('click', e => {
+    e.preventDefault(); // Prevent any default button behavior
+    toggleSound();
+    unlockAudioContext();
+    soundToggle.blur(); // Remove focus from the button after toggling
   });
-
-  soundToggle.addEventListener('touchend', handleSoundToggle);
-  soundToggle.addEventListener('click', handleSoundToggle);
 }
 
 function toggleSound() {
