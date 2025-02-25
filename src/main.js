@@ -15,6 +15,7 @@ const ASTEROID_MIN_SIZE = 20;
 const ASTEROID_MAX_SIZE = 45;
 const ASTEROID_SPAWN_MIN = 1000; // 1 second
 const ASTEROID_SPAWN_MAX = 4000; // 4 seconds
+const BULLET_SPEED = 15;
 const BULLET_COLOR = '#FFBF00';
 const BULLET_GRAVITY_MULTIPLIER = 10;
 const STARTING_ASTEROIDS = 3;
@@ -298,7 +299,7 @@ class Bullet {
     this.x = x;
     this.y = y;
     this.angle = angle;
-    this.speed = 10;
+    this.speed = BULLET_SPEED;
     this.size = 5;
   }
 
