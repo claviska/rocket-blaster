@@ -61,9 +61,8 @@ const highScoreDisplay = document.getElementById('highScore');
 const gameOverDisplay = document.getElementById('gameOver');
 const startDialog = document.getElementById('startDialog');
 const touchControls = document.getElementById('touchControls');
-const leftButton = document.getElementById('leftButton');
-const rightButton = document.getElementById('rightButton');
-const thrustButton = document.getElementById('thrustButton');
+const directionalControl = document.getElementById('directionalControl');
+const joystick = document.getElementById('joystick');
 const shootButton = document.getElementById('shootButton');
 const restartButton = document.getElementById('restartButton');
 const savedSoundState = localStorage.getItem('soundEnabled');
@@ -192,10 +191,11 @@ document.getElementById('restartButton').addEventListener('click', e => {
 
 // Touch controls
 const touchState = {
-  left: false,
-  right: false,
-  thrust: false,
-  shoot: false
+  directionX: 0,
+  directionY: 0,
+  shoot: false,
+  isTouchActive: false,
+  touchId: null // Track the specific touch identifier
 };
 
 // Check for texture mode in URL
@@ -224,28 +224,26 @@ function handleStartGameInteraction(e) {
 }
 
 function handleTouchStart(e) {
-  // Only prevent default if we're handling game controls
   if (e.target.classList.contains('touchButton')) {
     e.preventDefault();
   }
 
-  // Start game if not started
   if (!gameStarted && e.target.id === 'startButton') {
     startGame();
     return;
   }
 
-  // Handle touch controls
   const touches = e.touches;
   for (let i = 0; i < touches.length; i++) {
     const touch = touches[i];
     const x = touch.clientX;
     const y = touch.clientY;
 
-    // Update touch states
-    touchState.left = isTouchingButton(x, y, leftButton);
-    touchState.right = isTouchingButton(x, y, rightButton);
-    touchState.thrust = isTouchingButton(x, y, thrustButton);
+    if (isTouchingButton(x, y, directionalControl)) {
+      touchState.isTouchActive = true;
+      touchState.touchId = touch.identifier; // Track the specific touch
+      updateJoystick(touch);
+    }
     touchState.shoot = isTouchingButton(x, y, shootButton);
   }
 }
@@ -253,36 +251,93 @@ function handleTouchStart(e) {
 function handleTouchMove(e) {
   e.preventDefault();
   const touches = e.touches;
-  touchState.left = false;
-  touchState.right = false;
-  touchState.thrust = false;
-  touchState.shoot = false;
+
+  let directionalTouchFound = false;
   for (let i = 0; i < touches.length; i++) {
     const touch = touches[i];
     const x = touch.clientX;
     const y = touch.clientY;
-    if (isTouchingButton(x, y, leftButton)) touchState.left = true;
-    if (isTouchingButton(x, y, rightButton)) touchState.right = true;
-    if (isTouchingButton(x, y, thrustButton)) touchState.thrust = true;
-    if (isTouchingButton(x, y, shootButton)) touchState.shoot = true;
+
+    if (touchState.isTouchActive && touch.identifier === touchState.touchId) {
+      updateJoystick(touch);
+      directionalTouchFound = true;
+    }
+    if (isTouchingButton(x, y, shootButton)) {
+      touchState.shoot = true;
+    }
+  }
+
+  // If no matching touch is found, do nothing (touch may have ended)
+  if (!directionalTouchFound && touchState.isTouchActive) {
+    // Touch has moved but is still active; keep updating direction
+    const touch = Array.from(e.touches).find(t => t.identifier === touchState.touchId);
+    if (touch) {
+      updateJoystick(touch);
+    }
   }
 }
 
 function handleTouchEnd(e) {
   e.preventDefault();
   const touches = e.touches;
-  touchState.left = false;
-  touchState.right = false;
-  touchState.thrust = false;
-  touchState.shoot = false;
-  for (let i = 0; i < touches.length; i++) {
-    const touch = touches[i];
-    const x = touch.clientX;
-    const y = touch.clientY;
-    if (isTouchingButton(x, y, leftButton)) touchState.left = true;
-    if (isTouchingButton(x, y, rightButton)) touchState.right = true;
-    if (isTouchingButton(x, y, thrustButton)) touchState.thrust = true;
-    if (isTouchingButton(x, y, shootButton)) touchState.shoot = true;
+
+  // Find the touch that ended
+  const remainingTouches = Array.from(touches);
+  const touchEnded = !remainingTouches.some(t => t.identifier === touchState.touchId);
+
+  if (touchEnded && touchState.isTouchActive) {
+    touchState.directionX = 0;
+    touchState.directionY = 0;
+    touchState.isTouchActive = false;
+    touchState.touchId = null;
+    touchState.shoot = false;
+    joystick.style.transform = 'translate(0px, 0px)';
+  } else {
+    // Handle remaining touches
+    touchState.shoot = false;
+    for (let i = 0; i < touches.length; i++) {
+      const touch = touches[i];
+      const x = touch.clientX;
+      const y = touch.clientY;
+
+      if (touch.identifier === touchState.touchId) {
+        updateJoystick(touch);
+      }
+      if (isTouchingButton(x, y, shootButton)) {
+        touchState.shoot = true;
+      }
+    }
+  }
+}
+
+function updateJoystick(touch) {
+  const rect = directionalControl.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  const maxDistance = rect.width / 2 - joystick.offsetWidth / 2;
+
+  let dx = touch.clientX - centerX;
+  let dy = touch.clientY - centerY;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+
+  // Update joystick visual position (clamped to the circle)
+  let visualDx = dx;
+  let visualDy = dy;
+  if (distance > maxDistance) {
+    visualDx = (dx / distance) * maxDistance;
+    visualDy = (dy / distance) * maxDistance;
+  }
+  joystick.style.transform = `translate(${visualDx}px, ${visualDy}px)`;
+
+  // Update direction based on full touch position (not clamped)
+  // Normalize direction to a magnitude of 1 or less
+  const directionMagnitude = Math.min(distance / maxDistance, 1); // Cap at 1
+  if (distance > 0) {
+    touchState.directionX = (dx / distance) * directionMagnitude;
+    touchState.directionY = (dy / distance) * directionMagnitude;
+  } else {
+    touchState.directionX = 0;
+    touchState.directionY = 0;
   }
 }
 
@@ -291,9 +346,12 @@ function isTouchingButton(x, y, button) {
   return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
 }
 
-touchControls.addEventListener('touchstart', handleTouchStart);
-touchControls.addEventListener('touchmove', handleTouchMove);
-touchControls.addEventListener('touchend', handleTouchEnd);
+directionalControl.addEventListener('touchstart', handleTouchStart);
+directionalControl.addEventListener('touchmove', handleTouchMove);
+directionalControl.addEventListener('touchend', handleTouchEnd);
+shootButton.addEventListener('touchstart', handleTouchStart);
+shootButton.addEventListener('touchmove', handleTouchMove);
+shootButton.addEventListener('touchend', handleTouchEnd);
 
 class Bullet {
   constructor(x, y, angle) {
@@ -1367,22 +1425,35 @@ function update() {
       updateHighScore();
     }
   } else {
-    // Handle rotation with easing
     const maxRotationSpeed = 0.075;
     const rotationEasing = 0.2;
 
-    // Target rotation speed based on input
+    // Target rotation speed based on keyboard input
     let targetRotationSpeed = 0;
-    if (keys['ArrowLeft'] || touchState.left) targetRotationSpeed = -maxRotationSpeed;
-    if (keys['ArrowRight'] || touchState.right) targetRotationSpeed = maxRotationSpeed;
+    if (keys['ArrowLeft']) targetRotationSpeed = -maxRotationSpeed;
+    if (keys['ArrowRight']) targetRotationSpeed = maxRotationSpeed;
 
-    // Add rotationSpeed to player if it doesn't exist
+    // Joystick rotation and movement
+    const joystickEngaged = Math.abs(touchState.directionX) > 0.2 || Math.abs(touchState.directionY) > 0.2;
+    let targetAngle = player.angle; // Default to current angle if no joystick input
+    if (joystickEngaged) {
+      targetAngle = Math.atan2(touchState.directionY, touchState.directionX);
+      // Adjust rotation speed based on joystick X direction for smoother turning
+      targetRotationSpeed = maxRotationSpeed * touchState.directionX;
+    }
+
+    // Ease rotation toward target angle or apply rotation speed
     if (typeof player.rotationSpeed === 'undefined') player.rotationSpeed = 0;
+    if (joystickEngaged) {
+      // Smoothly rotate toward the joystick direction
+      let angleDiff = targetAngle - player.angle;
+      // Normalize angle difference to [-π, π]
+      angleDiff = ((angleDiff + Math.PI) % (2 * Math.PI)) - Math.PI;
+      player.rotationSpeed = Math.max(-maxRotationSpeed, Math.min(maxRotationSpeed, angleDiff * 0.2));
+    } else {
+      player.rotationSpeed += (targetRotationSpeed - player.rotationSpeed) * rotationEasing;
+    }
 
-    // Ease into the target rotation speed
-    player.rotationSpeed += (targetRotationSpeed - player.rotationSpeed) * rotationEasing;
-
-    // Apply rotation with small threshold to prevent micro-rotations
     if (Math.abs(player.rotationSpeed) > 0.001) {
       player.angle += player.rotationSpeed;
     } else {
@@ -1390,53 +1461,69 @@ function update() {
     }
 
     const isZeroGravity = zeroGravityToggle.checked;
-    const isThrusting = keys['ArrowUp'] || touchState.thrust;
-    const isReversing = keys['ArrowDown'];
+    const isThrustingKeyboard = keys['ArrowUp'];
+    const isReversingKeyboard = keys['ArrowDown'];
 
-    // Calculate new thrusting state
+    // Joystick thrust direction and magnitude
+    const joystickMagnitude = Math.sqrt(
+      touchState.directionX * touchState.directionX + touchState.directionY * touchState.directionY
+    );
+    const thrustEngaged = joystickEngaged && joystickMagnitude > 0.2;
+
+    // Determine if thrusting is active (keyboard or joystick)
     const newIsThrusting =
-      keys['ArrowUp'] ||
-      touchState.thrust ||
-      keys['ArrowDown'] ||
-      keys['ArrowLeft'] ||
-      touchState.left ||
-      keys['ArrowRight'] ||
-      touchState.right;
+      isThrustingKeyboard || isReversingKeyboard || keys['ArrowLeft'] || keys['ArrowRight'] || thrustEngaged;
 
-    // Play sound when thrust animation starts
+    // Play thrust sound when starting
     if (newIsThrusting && !wasThrusting && gameStarted) {
       playSound('thrust');
     }
 
-    player.isThrusting = newIsThrusting;
+    player.isThrusting = newIsThrusting; // Show thrust animation when joystick or keys are engaged
     wasThrusting = newIsThrusting;
 
     if (isZeroGravity) {
-      // Zero gravity mode
-      if (isThrusting) {
+      // Zero gravity mode: Apply acceleration in joystick direction or keyboard input
+      if (isThrustingKeyboard) {
         player.velX += Math.cos(player.angle) * player.acceleration;
         player.velY += Math.sin(player.angle) * player.acceleration;
       }
-      if (isReversing) {
+      if (isReversingKeyboard) {
         player.velX -= Math.cos(player.angle) * player.acceleration;
         player.velY -= Math.sin(player.angle) * player.acceleration;
       }
+      if (thrustEngaged) {
+        const thrustDirectionX = touchState.directionX / joystickMagnitude; // Normalize direction
+        const thrustDirectionY = touchState.directionY / joystickMagnitude;
+        player.velX += thrustDirectionX * player.acceleration * joystickMagnitude;
+        player.velY += thrustDirectionY * player.acceleration * joystickMagnitude;
+      }
     } else {
-      // Regular gravity mode - movement only when keys are pressed
-      if (!isThrusting && !isReversing) {
+      // Regular gravity mode
+      if (!isThrustingKeyboard && !isReversingKeyboard && !thrustEngaged) {
         // Apply friction when not thrusting
         const frictionFactor = 0.98;
         player.velX *= frictionFactor;
         player.velY *= frictionFactor;
 
-        // Stop completely if speed is very low
         if (Math.abs(player.velX) < 0.01) player.velX = 0;
         if (Math.abs(player.velY) < 0.01) player.velY = 0;
       } else {
-        // Set velocity directly based on current angle and input
-        const targetSpeed = isThrusting ? player.maxSpeed : isReversing ? -player.maxSpeed : 0;
-        const targetVelX = Math.cos(player.angle) * targetSpeed;
-        const targetVelY = Math.sin(player.angle) * targetSpeed;
+        let targetVelX = 0;
+        let targetVelY = 0;
+        if (isThrustingKeyboard) {
+          targetVelX = Math.cos(player.angle) * player.maxSpeed;
+          targetVelY = Math.sin(player.angle) * player.maxSpeed;
+        } else if (isReversingKeyboard) {
+          targetVelX = -Math.cos(player.angle) * player.maxSpeed;
+          targetVelY = -Math.sin(player.angle) * player.maxSpeed;
+        }
+        if (thrustEngaged) {
+          const thrustDirectionX = touchState.directionX / joystickMagnitude;
+          const thrustDirectionY = touchState.directionY / joystickMagnitude;
+          targetVelX = thrustDirectionX * player.maxSpeed * joystickMagnitude;
+          targetVelY = thrustDirectionY * player.maxSpeed * joystickMagnitude;
+        }
 
         // Ease into the target velocity
         const easeAmount = 0.1;
@@ -1445,6 +1532,7 @@ function update() {
       }
     }
 
+    // Cap the speed
     const speed = Math.sqrt(player.velX * player.velX + player.velY * player.velY);
     if (speed > player.maxSpeed) {
       player.velX = (player.velX / speed) * player.maxSpeed;
@@ -1480,16 +1568,6 @@ function update() {
       playSound('bump');
       player.lastBumpSoundTime = Date.now();
     }
-
-    // Thrust animation during acceleration, deceleration, or turning
-    player.isThrusting =
-      keys['ArrowUp'] ||
-      touchState.thrust ||
-      keys['ArrowDown'] ||
-      keys['ArrowLeft'] ||
-      touchState.left ||
-      keys['ArrowRight'] ||
-      touchState.right;
 
     if ((keys[' '] || touchState.shoot) && !player.exploded) {
       const currentTime = Date.now();

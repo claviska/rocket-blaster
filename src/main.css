@@ -401,19 +401,11 @@ canvas {
   }
 }
 
-@media (hover: none) and (pointer: coarse) {
-  .keyboard-only {
-    display: none;
-  }
-}
-
 .touchButton {
   display: flex;
   position: absolute;
   align-items: center;
   justify-content: center;
-  width: 70px;
-  height: 70px;
   border: 2px solid #00ffcc;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.2);
@@ -422,45 +414,51 @@ canvas {
   opacity: 0.7;
   pointer-events: all;
   touch-action: none;
-
-  svg {
-    width: 50%;
-    height: 50%;
-  }
 }
 
-#leftButton {
+#directionalControl {
   bottom: 30px;
-  left: 20px;
+  left: 30px;
+  width: 120px;
+  height: 120px;
 }
 
-#rightButton {
-  bottom: 30px;
-  left: 100px;
-}
-
-#thrustButton {
-  right: 100px;
-  bottom: 30px;
+.joystick {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #00ffcc;
+  transition: transform 0.1s ease; /* Smooth movement */
 }
 
 #shootButton {
-  right: 20px;
+  right: 30px;
   bottom: 30px;
+  width: 70px;
+  height: 70px;
+}
+
+#shootButton svg {
+  width: 50%;
+  height: 50%;
+  stroke-width: 1.25px;
 }
 
 /* Bigger buttons on tablet */
 @media screen and (min-width: 897px) {
-  .touchButton {
+  #directionalControl {
+    width: 150px;
+    height: 150px;
+  }
+
+  .joystick {
+    width: 50px;
+    height: 50px;
+  }
+
+  #shootButton {
     width: 100px;
     height: 100px;
-  }
-
-  #rightButton {
-    left: 135px;
-  }
-
-  #thrustButton {
-    right: 135px;
   }
 }
