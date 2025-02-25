@@ -1,3 +1,10 @@
+body,
+html {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none; /* Prevents overscroll bounce */
+}
+
 html.is-using-keyboard {
   cursor: none;
 }
@@ -15,7 +22,9 @@ canvas {
   width: 100vw;
   height: 100dvh;
   margin: 0;
+  overscroll-behavior: none;
   background: black;
+  touch-action: none; /* Disables default touch actions like scrolling */
 
   @media screen and (max-width: 896px) {
     width: 200vw;
