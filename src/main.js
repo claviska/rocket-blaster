@@ -1850,9 +1850,9 @@ function draw() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   drawStars();
+  blackHoles.forEach(bh => bh.draw());
   asteroids.forEach(a => a.draw());
   powerUps.forEach(p => p.draw());
-  blackHoles.forEach(bh => bh.draw());
   drawPlayer();
   bullets.forEach(b => b.draw());
   scoreDisplay.textContent = `Score: ${score}`;
