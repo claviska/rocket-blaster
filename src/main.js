@@ -28,8 +28,8 @@ const BLACK_HOLE_SPAWN_MIN = 30000; // 30 seconds
 const BLACK_HOLE_SPAWN_MAX = 70000; // 70 seconds
 const STAR_SPAWN_MIN = 60000; // 60 seconds
 const STAR_SPAWN_MAX = 100000; // 100 seconds
-const SHIELD_SPAWN_MIN = 30000; // 30 seconds
-const SHIELD_SPAWN_MAX = 60000; // 70 seconds
+const SHIELD_SPAWN_MIN = 30000; // 20 seconds
+const SHIELD_SPAWN_MAX = 60000; // 60 seconds
 const SHIELD_DURATION = 8000; // 8 seconds
 const SHIELD_ROTATION_DURATION = 2500;
 const SHIELD_BLINK_DURATION = 2000; // 2 seconds blink warning
@@ -109,6 +109,7 @@ let bullets = [];
 let asteroids = [];
 let powerUps = [];
 let blackHoles = [];
+let pointTexts = [];
 let score = 0;
 let shotsFired = 0;
 let hits = 0;
@@ -1167,6 +1168,37 @@ class BlackHole {
   }
 }
 
+class PointText {
+  constructor(x, y, points, color = '#ffffff') {
+    this.x = x;
+    this.y = y;
+    this.points = points;
+    this.color = color;
+    this.opacity = 1;
+    this.life = 60; // Frames to live (about 1 second at 60fps)
+    this.velocityY = -1; // Move upward
+    this.fontSize = 13;
+  }
+
+  update() {
+    this.y += this.velocityY;
+    this.opacity = Math.max(0, this.life / 60); // Ensure opacity goes to 0
+    this.life--;
+  }
+
+  draw() {
+    if (this.life <= 0) return; // Skip drawing if life is depleted
+    ctx.save();
+    ctx.globalAlpha = this.opacity;
+    ctx.fillStyle = this.color;
+    ctx.font = `${this.fontSize}px 'Orbitron', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${this.points}`, this.x, this.y);
+    ctx.restore();
+  }
+}
+
 for (let i = 0; i < STARTING_ASTEROIDS; i++) {
   asteroids.push(new Asteroid());
 }
@@ -1361,6 +1393,7 @@ function restartGame() {
     .map(() => new Asteroid());
   powerUps = [];
   blackHoles = [];
+  pointTexts = [];
   pendingAsteroids = [];
   score = 0;
   updateHighScore();
@@ -1624,6 +1657,9 @@ function update() {
           asteroidsDestroyed += 1;
           updateHighScore();
 
+          // Spawn point text for bullet hit
+          pointTexts.push(new PointText(asteroids[i].x, asteroids[i].y, 50));
+
           const delay = Math.random() * (ASTEROID_SPAWN_MAX - ASTEROID_SPAWN_MIN) + ASTEROID_SPAWN_MIN;
           pendingAsteroids.push({ spawnTime: Date.now() + delay });
 
@@ -1679,6 +1715,9 @@ function update() {
               hits++;
               updateHighScore();
 
+              // Spawn point text for shield hit
+              pointTexts.push(new PointText(asteroids[i].x, asteroids[i].y, 50));
+
               const delay = Math.random() * (ASTEROID_SPAWN_MAX - ASTEROID_SPAWN_MIN) + ASTEROID_SPAWN_MIN;
               pendingAsteroids.push({ spawnTime: Date.now() + delay });
 
@@ -1721,6 +1760,9 @@ function update() {
             powerUps.splice(i, 1);
             score += 100;
             updateHighScore();
+
+            // Spawn point text for shield pickup
+            pointTexts.push(new PointText(p.x, p.y, 100, '#ffffff')); // White color for power-up
           } else if (p instanceof Star) {
             let destroyedCount = 0;
             asteroids.forEach(a => {
@@ -1735,6 +1777,8 @@ function update() {
                 a.explosionLife = 30;
                 destroyedCount++;
                 hits++;
+                // Spawn point text for each asteroid destroyed by supernova
+                pointTexts.push(new PointText(a.x, a.y, 50));
               }
             });
             // Remove all black holes
@@ -1759,6 +1803,9 @@ function update() {
             flashActive = true;
             flashStartTime = Date.now();
             shakeCanvas();
+
+            // Spawn point text for supernova pickup
+            pointTexts.push(new PointText(p.x, p.y, 1000, '#ffff00')); // Yellow for supernova
           }
           break;
         }
@@ -1831,6 +1878,10 @@ function update() {
     }
     return true;
   });
+
+  // Update point texts
+  pointTexts = pointTexts.filter(pt => pt.life > 0);
+  pointTexts.forEach(pt => pt.update());
 
   // Asteroid-asteroid collisions
   for (let i = 0; i < asteroids.length; i++) {
@@ -2004,6 +2055,9 @@ function draw() {
     const elapsedTime = Date.now() - gameStartTime;
     timerDisplay.textContent = formatTime(elapsedTime);
   }
+
+  // Draw point texts
+  pointTexts.forEach(pt => pt.draw());
 
   if (flashActive) {
     const elapsed = Date.now() - flashStartTime;
