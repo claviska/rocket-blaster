@@ -10,7 +10,16 @@ const ROCKET_COLORS = {
 let ROCKET_COLOR = ROCKET_COLORS.blue;
 const ROCKET_ACCENT = '#FFFFFF';
 const THRUST_COLORS = ['#FF6B00', '#FF9500', '#FFC107'];
-const ASTEROID_COLORS = ['#de3333', '#20afa5', '#24a3c0', '#2fba79', '#e5cb64', '#b818b8'];
+const ASTEROID_COLORS = [
+  '#de3333', // Red
+  '#20afa5', // Teal
+  '#24a3c0', // Cyan
+  '#2fba79', // Green
+  '#e5cb64', // Yellow
+  '#b818b8', // Magenta
+  '#ff8c33', // Orange
+  '#8c8c8c' // Gray
+];
 const ASTEROID_MIN_SIZE = 20;
 const ASTEROID_MAX_SIZE = 45;
 const ASTEROID_SPAWN_MIN = 1000; // 1 second
