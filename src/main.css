@@ -164,6 +164,8 @@ canvas {
   font-family: 'Orbitron', sans-serif;
   text-align: center;
   text-shadow: 0 0 10px rgba(255, 51, 102, 0.8);
+  user-select: none;
+  -webkit-user-select: none;
 
   @media screen and (max-width: 896px) {
     top: 50dvh; /* Center relative to viewport height */
@@ -193,6 +195,8 @@ canvas {
   text-align: center;
   text-shadow: 0 0 8px rgba(0, 255, 204, 0.8);
   text-wrap: balance;
+  user-select: none;
+  -webkit-user-select: none;
 
   h1 {
     margin: 0;
@@ -250,7 +254,11 @@ canvas {
 #hits,
 #highScore,
 #timer,
-#soundToggle {
+#soundToggle,
+#touchControls {
+  user-select: none;
+  -webkit-user-select: none;
+
   &:not(:has(~ #startDialog[inert])) {
     display: none;
   }
