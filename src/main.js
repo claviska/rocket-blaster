@@ -1797,7 +1797,7 @@ function update() {
             updateHighScore();
 
             // Spawn point text for shield pickup
-            pointTexts.push(new PointText(p.x, p.y, 100, '#ffffff')); // White color for power-up
+            pointTexts.push(new PointText(p.x, p.y, 100));
           } else if (p instanceof Star) {
             let destroyedCount = 0;
             asteroids.forEach(a => {
@@ -1840,7 +1840,7 @@ function update() {
             shakeCanvas();
 
             // Spawn point text for supernova pickup
-            pointTexts.push(new PointText(p.x, p.y, 1000, '#ffff00')); // Yellow for supernova
+            pointTexts.push(new PointText(p.x, p.y, 1000));
           }
           break;
         }
