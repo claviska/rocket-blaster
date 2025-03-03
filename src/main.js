@@ -36,11 +36,11 @@ const BLACK_HOLE_SIZE = ASTEROID_MAX_SIZE * 1.75;
 const BLACK_HOLE_DURATION = 10000; // 10 seconds
 const BLACK_HOLE_GRAVITY_STRENGTH = 0.15;
 const BLACK_HOLE_ROTATION_SPEED = 0.075;
-const BLACK_HOLE_SPAWN_MIN = 30000; // 30 seconds
-const BLACK_HOLE_SPAWN_MAX = 70000; // 70 seconds
+const BLACK_HOLE_SPAWN_MIN = 15000; // 15 seconds
+const BLACK_HOLE_SPAWN_MAX = 60000; // 60 seconds
 const STAR_SPAWN_MIN = 60000; // 60 seconds
 const STAR_SPAWN_MAX = 100000; // 100 seconds
-const SHIELD_SPAWN_MIN = 30000; // 20 seconds
+const SHIELD_SPAWN_MIN = 30000; // 30 seconds
 const SHIELD_SPAWN_MAX = 60000; // 60 seconds
 const SHIELD_DURATION = 8000; // 8 seconds
 const SHIELD_ROTATION_DURATION = 2500;
@@ -1685,21 +1685,14 @@ function update() {
       }
     }
 
-    // Player-black hole collision
+    // Player-black hole collision (no destruction, gravity only)
     if (!player.exploded) {
       for (let i = 0; i < blackHoles.length; i++) {
         if (Date.now() - gameStartTime > 3000 && blackHoles[i].canCollide()) {
           const dx = player.x - blackHoles[i].x;
           const dy = player.y - blackHoles[i].y;
           const distance = Math.sqrt(dx * dx + dy * dy);
-          if (distance < player.hitRadius + blackHoles[i].collisionRadius) {
-            // Even with a shield, black hole collision ends the game
-            player.exploded = true;
-            playSound('game-over');
-            shakeCanvas();
-            bullets = [];
-            break;
-          }
+          // No destruction; gravity is applied later via applyGravity
         }
       }
     }
@@ -1825,7 +1818,7 @@ function update() {
       }
     }
 
-    // Asteroid-black hole collision
+    // Asteroid-black hole collision (no destruction, gravity only)
     if (blackHoles.length > 0) {
       for (let i = blackHoles.length - 1; i >= 0; i--) {
         const bh = blackHoles[i];
@@ -1836,20 +1829,7 @@ function update() {
               const dx = asteroid.x - bh.x;
               const dy = asteroid.y - bh.y;
               const distance = Math.sqrt(dx * dx + dy * dy);
-              if (distance < asteroid.hitRadius + bh.collisionRadius) {
-                asteroids.splice(j, 1);
-                playSound('black-hole-destroy');
-
-                // Spawn a new asteroid like when shot by the player
-                const delay = Math.random() * (ASTEROID_SPAWN_MAX - ASTEROID_SPAWN_MIN) + ASTEROID_SPAWN_MIN;
-                pendingAsteroids.push({ spawnTime: Date.now() + delay });
-
-                asteroidsDestroyed += 1; // Increment total destroyed asteroids
-                if (asteroidsDestroyed % INCREASE_ASTEROIDS_EVERY_N_HITS === 0) {
-                  const extraDelay = Math.random() * (ASTEROID_SPAWN_MAX - ASTEROID_SPAWN_MIN) + ASTEROID_SPAWN_MIN;
-                  pendingAsteroids.push({ spawnTime: Date.now() + extraDelay });
-                }
-              }
+              // No destruction; gravity is applied later via applyGravity
             }
           }
         }
