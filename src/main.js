@@ -140,8 +140,6 @@ let fadeInTime = 25;
 let fullOpacityTime = 25;
 let fadeOutTime = 25;
 let cachedHighScore = parseInt(localStorage.getItem('highScore')) || 0;
-let hasCustomTexture = false;
-let textureImage = null;
 let isShaking = false;
 let shakeDuration = 500; // Duration in milliseconds
 let shakeIntensity = 10; // Maximum shake offset in pixels
@@ -216,19 +214,6 @@ const touchState = {
   isTouchActive: false,
   touchId: null // Track the specific touch identifier
 };
-
-// Check for texture mode in URL
-function checkForTextureMode() {
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.has('texture')) {
-    hasCustomTexture = true;
-    textureImage = new Image();
-    textureImage.src = `/textures/${urlParams.get('texture')}.png`;
-    textureImage.onerror = err => {
-      console.error(err);
-    };
-  }
-}
 
 function handleStartGameInteraction(e) {
   // Don't start the game if clicking the zero G checkbox
@@ -557,137 +542,124 @@ class Asteroid {
       b: Math.max(0, Math.min(255, color.b + amount))
     });
 
-    if (hasCustomTexture && textureImage && textureImage.complete) {
-      ctx.save();
-      drawAsteroidShape();
-      ctx.clip();
-      const imgSize = this.size * 2.4;
-      ctx.drawImage(textureImage, -imgSize / 2, -imgSize / 2, imgSize, imgSize);
-      ctx.restore();
-    } else {
-      const baseColor = hexToRgb(this.color);
-      const gradient = ctx.createRadialGradient(this.size * 0.3, -this.size * 0.3, 0, 0, 0, this.size * 1.2);
+    const baseColor = hexToRgb(this.color);
+    const gradient = ctx.createRadialGradient(this.size * 0.3, -this.size * 0.3, 0, 0, 0, this.size * 1.2);
 
-      gradient.addColorStop(
-        0,
-        `rgb(${adjustColor(baseColor, 80).r}, ${adjustColor(baseColor, 80).g}, ${adjustColor(baseColor, 80).b})`
-      );
-      gradient.addColorStop(
-        0.3,
-        `rgb(${adjustColor(baseColor, 40).r}, ${adjustColor(baseColor, 40).g}, ${adjustColor(baseColor, 40).b})`
-      );
-      gradient.addColorStop(0.6, `rgb(${baseColor.r}, ${baseColor.g}, ${baseColor.b})`);
-      gradient.addColorStop(
-        0.8,
-        `rgb(${adjustColor(baseColor, -60).r}, ${adjustColor(baseColor, -60).g}, ${adjustColor(baseColor, -60).b})`
-      );
-      gradient.addColorStop(
-        1,
-        `rgb(${adjustColor(baseColor, -90).r}, ${adjustColor(baseColor, -90).g}, ${adjustColor(baseColor, -90).b})`
-      );
+    gradient.addColorStop(
+      0,
+      `rgb(${adjustColor(baseColor, 80).r}, ${adjustColor(baseColor, 80).g}, ${adjustColor(baseColor, 80).b})`
+    );
+    gradient.addColorStop(
+      0.3,
+      `rgb(${adjustColor(baseColor, 40).r}, ${adjustColor(baseColor, 40).g}, ${adjustColor(baseColor, 40).b})`
+    );
+    gradient.addColorStop(0.6, `rgb(${baseColor.r}, ${baseColor.g}, ${baseColor.b})`);
+    gradient.addColorStop(
+      0.8,
+      `rgb(${adjustColor(baseColor, -60).r}, ${adjustColor(baseColor, -60).g}, ${adjustColor(baseColor, -60).b})`
+    );
+    gradient.addColorStop(
+      1,
+      `rgb(${adjustColor(baseColor, -90).r}, ${adjustColor(baseColor, -90).g}, ${adjustColor(baseColor, -90).b})`
+    );
 
-      ctx.fillStyle = gradient;
-      drawAsteroidShape();
-      ctx.fill();
+    ctx.fillStyle = gradient;
+    drawAsteroidShape();
+    ctx.fill();
 
-      if (!this.craters) {
-        const craterCount = Math.floor(Math.random() * 3) + 5; // 5-7 craters
-        this.craters = [];
-        playSound('asteroid-spawn');
-        const minDistance = this.size * 0.3;
+    if (!this.craters) {
+      const craterCount = Math.floor(Math.random() * 3) + 5; // 5-7 craters
+      this.craters = [];
+      playSound('asteroid-spawn');
+      const minDistance = this.size * 0.3;
 
-        const isTooClose = (x, y, existingCraters, radius) => {
-          return existingCraters.some(c => {
-            const dx = c.x - x;
-            const dy = c.y - y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            return distance < minDistance + c.radius + radius;
-          });
-        };
+      const isTooClose = (x, y, existingCraters, radius) => {
+        return existingCraters.some(c => {
+          const dx = c.x - x;
+          const dy = c.y - y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          return distance < minDistance + c.radius + radius;
+        });
+      };
 
-        for (let i = 0; i < craterCount; i++) {
-          let attempts = 0;
-          let newCrater;
-          do {
-            const angle = Math.random() * Math.PI * 2;
-            const distance = Math.random() * this.size * 0.7;
-            const radius = Math.random() * (this.size * 0.2) + this.size * 0.08;
-            newCrater = {
-              x: Math.cos(angle) * distance,
-              y: Math.sin(angle) * distance,
-              radius: radius,
-              depth: Math.random() * 0.6 + 0.2,
-              rimWidth: Math.random() * 0.3 + 0.1,
-              rimLight: Math.random() * 0.4 + 0.3
-            };
-            attempts++;
-          } while (isTooClose(newCrater.x, newCrater.y, this.craters, newCrater.radius) && attempts < 20);
+      for (let i = 0; i < craterCount; i++) {
+        let attempts = 0;
+        let newCrater;
+        do {
+          const angle = Math.random() * Math.PI * 2;
+          const distance = Math.random() * this.size * 0.7;
+          const radius = Math.random() * (this.size * 0.2) + this.size * 0.08;
+          newCrater = {
+            x: Math.cos(angle) * distance,
+            y: Math.sin(angle) * distance,
+            radius: radius,
+            depth: Math.random() * 0.6 + 0.2,
+            rimWidth: Math.random() * 0.3 + 0.1,
+            rimLight: Math.random() * 0.4 + 0.3
+          };
+          attempts++;
+        } while (isTooClose(newCrater.x, newCrater.y, this.craters, newCrater.radius) && attempts < 20);
 
-          if (attempts < 20) {
-            this.craters.push(newCrater);
-          }
+        if (attempts < 20) {
+          this.craters.push(newCrater);
         }
       }
-
-      ctx.save();
-      drawAsteroidShape();
-      ctx.clip();
-
-      this.craters.forEach(crater => {
-        const shadowGradient = ctx.createRadialGradient(
-          crater.x + crater.radius * 0.2,
-          crater.y - crater.radius * 0.2,
-          0,
-          crater.x,
-          crater.y,
-          crater.radius * 1.2
-        );
-
-        const darknessVariation = Math.random() * 20 - 10;
-        const deepShadow = adjustColor(baseColor, -70 + darknessVariation);
-        const midShadow = adjustColor(baseColor, -50 + darknessVariation);
-
-        shadowGradient.addColorStop(
-          0,
-          `rgba(${deepShadow.r}, ${deepShadow.g}, ${deepShadow.b}, ${crater.depth * 1.1})`
-        );
-        shadowGradient.addColorStop(0.6, `rgba(${midShadow.r}, ${midShadow.g}, ${midShadow.b}, ${crater.depth * 0.8})`);
-        shadowGradient.addColorStop(1, `rgba(${midShadow.r}, ${midShadow.g}, ${midShadow.b}, 0)`);
-
-        ctx.fillStyle = shadowGradient;
-        ctx.beginPath();
-        ctx.arc(crater.x, crater.y, crater.radius, 0, Math.PI * 2);
-        ctx.fill();
-
-        const rimGradient = ctx.createRadialGradient(
-          crater.x - crater.radius * 0.3,
-          crater.y - crater.radius * 0.3,
-          crater.radius * (1 - crater.rimWidth * 1.2),
-          crater.x,
-          crater.y,
-          crater.radius * 1.15
-        );
-        const highlightColor = adjustColor(baseColor, 50);
-        const lightColor = adjustColor(baseColor, 20);
-        rimGradient.addColorStop(
-          0,
-          `rgba(${highlightColor.r}, ${highlightColor.g}, ${highlightColor.b}, ${crater.rimLight * 1.2})`
-        );
-        rimGradient.addColorStop(
-          0.4,
-          `rgba(${lightColor.r}, ${lightColor.g}, ${lightColor.b}, ${crater.rimLight * 0.8})`
-        );
-        rimGradient.addColorStop(1, `rgba(${baseColor.r}, ${baseColor.g}, ${baseColor.b}, 0)`);
-
-        ctx.fillStyle = rimGradient;
-        ctx.beginPath();
-        ctx.arc(crater.x, crater.y, crater.radius * 1.15, 0, Math.PI * 2);
-        ctx.fill();
-      });
-
-      ctx.restore();
     }
 
+    ctx.save();
+    drawAsteroidShape();
+    ctx.clip();
+
+    this.craters.forEach(crater => {
+      const shadowGradient = ctx.createRadialGradient(
+        crater.x + crater.radius * 0.2,
+        crater.y - crater.radius * 0.2,
+        0,
+        crater.x,
+        crater.y,
+        crater.radius * 1.2
+      );
+
+      const darknessVariation = Math.random() * 20 - 10;
+      const deepShadow = adjustColor(baseColor, -70 + darknessVariation);
+      const midShadow = adjustColor(baseColor, -50 + darknessVariation);
+
+      shadowGradient.addColorStop(0, `rgba(${deepShadow.r}, ${deepShadow.g}, ${deepShadow.b}, ${crater.depth * 1.1})`);
+      shadowGradient.addColorStop(0.6, `rgba(${midShadow.r}, ${midShadow.g}, ${midShadow.b}, ${crater.depth * 0.8})`);
+      shadowGradient.addColorStop(1, `rgba(${midShadow.r}, ${midShadow.g}, ${midShadow.b}, 0)`);
+
+      ctx.fillStyle = shadowGradient;
+      ctx.beginPath();
+      ctx.arc(crater.x, crater.y, crater.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      const rimGradient = ctx.createRadialGradient(
+        crater.x - crater.radius * 0.3,
+        crater.y - crater.radius * 0.3,
+        crater.radius * (1 - crater.rimWidth * 1.2),
+        crater.x,
+        crater.y,
+        crater.radius * 1.15
+      );
+      const highlightColor = adjustColor(baseColor, 50);
+      const lightColor = adjustColor(baseColor, 20);
+      rimGradient.addColorStop(
+        0,
+        `rgba(${highlightColor.r}, ${highlightColor.g}, ${highlightColor.b}, ${crater.rimLight * 1.2})`
+      );
+      rimGradient.addColorStop(
+        0.4,
+        `rgba(${lightColor.r}, ${lightColor.g}, ${lightColor.b}, ${crater.rimLight * 0.8})`
+      );
+      rimGradient.addColorStop(1, `rgba(${baseColor.r}, ${baseColor.g}, ${baseColor.b}, 0)`);
+
+      ctx.fillStyle = rimGradient;
+      ctx.beginPath();
+      ctx.arc(crater.x, crater.y, crater.radius * 1.15, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    ctx.restore();
     ctx.restore();
   }
 
@@ -2390,5 +2362,4 @@ if (savedSoundState !== null) {
   soundToggle.classList.toggle('muted', !isSoundEnabled);
 }
 
-checkForTextureMode();
 gameLoop();
