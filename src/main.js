@@ -15,6 +15,9 @@ const ASTEROID_MIN_SIZE = 20;
 const ASTEROID_MAX_SIZE = 45;
 const ASTEROID_SPAWN_MIN = 1000; // 1 second
 const ASTEROID_SPAWN_MAX = 4000; // 4 seconds
+const ASTEROID_POINTS_MIN = 50; // Points for largest asteroids
+const ASTEROID_POINTS_MAX = 250; // Points for smallest asteroids
+const ASTEROID_POINTS_STEP = 50; // Step interval for points
 const BULLET_SPEED = 15;
 const BULLET_COLOR = '#FFBF00';
 const BULLET_GRAVITY_MULTIPLIER = 10;
@@ -421,6 +424,15 @@ class Asteroid {
     this.explosionLife = 0;
     this.color = ASTEROID_COLORS[Math.floor(Math.random() * ASTEROID_COLORS.length)];
     this.points = [];
+
+    // Calculate points based on size
+    const sizeRange = ASTEROID_MAX_SIZE - ASTEROID_MIN_SIZE;
+    const sizeFraction = (ASTEROID_MAX_SIZE - this.size) / sizeRange; // 0 (largest) to 1 (smallest)
+    const pointsRange = ASTEROID_POINTS_MAX - ASTEROID_POINTS_MIN;
+    const rawPoints = ASTEROID_POINTS_MIN + sizeFraction * pointsRange; // Linear interpolation
+    // Snap to nearest step
+    this.pointsValue = Math.round(rawPoints / ASTEROID_POINTS_STEP) * ASTEROID_POINTS_STEP;
+    this.pointsValue = Math.max(ASTEROID_POINTS_MIN, Math.min(ASTEROID_POINTS_MAX, this.pointsValue));
 
     // Initialize velocity components
     this.velX = this.speed * Math.cos(this.angle);
@@ -1652,13 +1664,13 @@ function update() {
           playSound('asteroid-explode');
 
           bullets.splice(j, 1);
-          score += 50;
+          score += asteroids[i].pointsValue;
           hits++;
           asteroidsDestroyed += 1;
           updateHighScore();
 
           // Spawn point text for bullet hit
-          pointTexts.push(new PointText(asteroids[i].x, asteroids[i].y, 50));
+          pointTexts.push(new PointText(asteroids[i].x, asteroids[i].y, asteroids[i].pointsValue));
 
           const delay = Math.random() * (ASTEROID_SPAWN_MAX - ASTEROID_SPAWN_MIN) + ASTEROID_SPAWN_MIN;
           pendingAsteroids.push({ spawnTime: Date.now() + delay });
@@ -1711,12 +1723,12 @@ function update() {
               }
               asteroids[i].explosionLife = 30;
               playSound('asteroid-explode');
-              score += 50;
+              score += asteroids[i].pointsValue;
               hits++;
               updateHighScore();
 
               // Spawn point text for shield hit
-              pointTexts.push(new PointText(asteroids[i].x, asteroids[i].y, 50));
+              pointTexts.push(new PointText(asteroids[i].x, asteroids[i].y, asteroids[i].pointsValue));
 
               const delay = Math.random() * (ASTEROID_SPAWN_MAX - ASTEROID_SPAWN_MIN) + ASTEROID_SPAWN_MIN;
               pendingAsteroids.push({ spawnTime: Date.now() + delay });
@@ -1758,7 +1770,7 @@ function update() {
             player.shieldExpireSoundPlayed = false;
             playSound('power-up');
             powerUps.splice(i, 1);
-            score += 100;
+            score += 500;
             updateHighScore();
 
             // Spawn point text for shield pickup
@@ -1784,8 +1796,8 @@ function update() {
             // Remove all black holes
             if (blackHoles.length > 0) {
               blackHoles = []; // Clear all black holes
-              playSound('black-hole-destroy'); // Play sound for black hole destruction
-              score += 500; // Bonus points for removing black holes
+              playSound('black-hole-destroy');
+
               // Reset the black hole spawn timer
               pendingBlackHoleSpawnTime =
                 Date.now() + Math.random() * (BLACK_HOLE_SPAWN_MAX - BLACK_HOLE_SPAWN_MIN) + BLACK_HOLE_SPAWN_MIN;
