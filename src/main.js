@@ -112,6 +112,7 @@ const player = {
   lastShotTime: 0,
   shootCooldown: 200, // min delay between shots,
   shieldExpireSoundPlayed: false,
+  tracerEnabled: false,
   lastBumpSoundTime: 0
 };
 
@@ -168,6 +169,12 @@ const keys = {};
 window.addEventListener('keydown', e => {
   keys[e.key] = true;
 
+  // Toggle tracer on Shift press
+  if (e.key === 'Shift' && !e.repeat) {
+    // Check !e.repeat to prevent toggle on key hold
+    player.tracerEnabled = !player.tracerEnabled;
+  }
+
   // Add an asteroid when pressing backtick, only during active game play
   if (e.key === '`' && gameStarted && !player.exploded) {
     asteroids.push(new Asteroid());
@@ -175,7 +182,6 @@ window.addEventListener('keydown', e => {
 
   // Prevent game start from key presses when startDialog is visible
   if (!gameStarted && startDialog.style.display !== 'none') {
-    // Do nothing - wait for Start button click
     return;
   }
 
@@ -1358,7 +1364,7 @@ function drawPlayer() {
   ctx.restore(); // Restore after drawing the rocket
 
   // Draw tracer when Shift is held
-  if (keys['Shift']) {
+  if (player.tracerEnabled) {
     ctx.save();
     ctx.translate(player.x, player.y);
     ctx.rotate(player.angle);
