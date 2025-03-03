@@ -1390,11 +1390,9 @@ function updateHighScore() {
     cachedHighScore = score;
     localStorage.setItem('highScore', score);
     highScoreDisplay.textContent = `Best: ${score}`;
-    highScoreDisplay.style.display = 'block';
     highScoreDisplay.classList.add('is-current'); // Apply orange color and blinking
   } else {
     highScoreDisplay.textContent = `Best: ${cachedHighScore}`;
-    highScoreDisplay.style.display = 'block'; // Always show the display
     highScoreDisplay.classList.remove('is-current'); // Reset to default color
   }
 }

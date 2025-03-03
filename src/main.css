@@ -244,6 +244,18 @@ canvas {
   }
 }
 
+/* Hide scoreboard when the start dialog is showing */
+#score,
+#accuracy,
+#hits,
+#highScore,
+#timer,
+#soundToggle {
+  &:not(:has(~ #startDialog[inert])) {
+    display: none;
+  }
+}
+
 .game-button {
   margin-block: 10px 20px;
   padding: 15px 30px;
