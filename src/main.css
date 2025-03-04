@@ -439,8 +439,8 @@ canvas {
 #directionalControl {
   bottom: 30px;
   left: 30px;
-  width: 120px;
-  height: 120px;
+  width: 100px;
+  height: 100px;
 }
 
 .joystick {
@@ -455,8 +455,8 @@ canvas {
 #shootButton {
   right: 30px;
   bottom: 30px;
-  width: 70px;
-  height: 70px;
+  width: 100px;
+  height: 100px;
 }
 
 #shootButton svg {
@@ -468,8 +468,8 @@ canvas {
 /* Bigger buttons on tablet */
 @media screen and (min-width: 897px) {
   #directionalControl {
-    width: 150px;
-    height: 150px;
+    width: 125px;
+    height: 125px;
   }
 
   .joystick {
@@ -478,7 +478,7 @@ canvas {
   }
 
   #shootButton {
-    width: 100px;
-    height: 100px;
+    width: 140px;
+    height: 140px;
   }
 }
