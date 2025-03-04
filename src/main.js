@@ -1,3 +1,5 @@
+const TARGET_FPS = 60; // Target frames per second for consistent speed
+const TARGET_DELTA = 1000 / TARGET_FPS; // Ideal time per frame in milliseconds
 const ROCKET_COLORS = {
   red: '#ff4d4d',
   amber: '#ffbf00',
@@ -7,7 +9,6 @@ const ROCKET_COLORS = {
   pink: '#ff66b2',
   gray: '#686868'
 };
-let ROCKET_COLOR = ROCKET_COLORS.blue;
 const ROCKET_ACCENT = '#FFFFFF';
 const THRUST_COLORS = ['#FF6B00', '#FF9500', '#FFC107'];
 const ASTEROID_COLORS = [
@@ -77,44 +78,10 @@ const joystick = document.getElementById('joystick');
 const shootButton = document.getElementById('shootButton');
 const restartButton = document.getElementById('restartButton');
 const savedSoundState = localStorage.getItem('soundEnabled');
+
+let rocketColor = ROCKET_COLORS.blue;
 let scaleFactor = window.innerWidth < 768 ? 0.5 : 1;
-
-canvas.width = window.innerWidth / scaleFactor;
-canvas.height = window.innerHeight / scaleFactor;
-ctx.scale(scaleFactor, scaleFactor);
-
-const player = {
-  x: canvas.width / 2,
-  y: canvas.height / 2,
-  angle: 0,
-  velX: 0,
-  velY: 0,
-  maxSpeed: 3,
-  acceleration: 0.1,
-  bodyLength: 12,
-  bodyWidth: 12,
-  noseLength: 12,
-  hitRadius: 20,
-  finSize: 6,
-  pulseScale: 1,
-  pulseTimer: 0,
-  shootScale: 1,
-  shootTimer: 0,
-  exploded: false,
-  pieces: [],
-  thrustFrame: 0,
-  isThrusting: false,
-  hasShield: false,
-  shieldStartTime: 0,
-  shieldAngle: 0,
-  shieldVisible: true,
-  lastShotTime: 0,
-  shootCooldown: 200, // min delay between shots,
-  shieldExpireSoundPlayed: false,
-  tracerEnabled: false,
-  lastBumpSoundTime: 0
-};
-
+let lastTime = performance.now(); // Track the last frame time
 let backgroundCycleStartTime = Date.now();
 let currentBackgroundIndex = 0;
 let bullets = [];
@@ -147,6 +114,42 @@ let isPaused = false;
 let pauseTime = 0;
 let isSoundEnabled = true;
 let wasThrusting = false;
+
+canvas.width = window.innerWidth / scaleFactor;
+canvas.height = window.innerHeight / scaleFactor;
+ctx.scale(scaleFactor, scaleFactor);
+
+const player = {
+  x: canvas.width / 2,
+  y: canvas.height / 2,
+  angle: 0,
+  velX: 0,
+  velY: 0,
+  maxSpeed: 3.5,
+  acceleration: 0.1,
+  bodyLength: 12,
+  bodyWidth: 12,
+  noseLength: 12,
+  hitRadius: 20,
+  finSize: 6,
+  pulseScale: 1,
+  pulseTimer: 0,
+  shootScale: 1,
+  shootTimer: 0,
+  exploded: false,
+  pieces: [],
+  thrustFrame: 0,
+  isThrusting: false,
+  hasShield: false,
+  shieldStartTime: 0,
+  shieldAngle: 0,
+  shieldVisible: true,
+  lastShotTime: 0,
+  shootCooldown: 200, // min delay between shots,
+  shieldExpireSoundPlayed: false,
+  tracerEnabled: false,
+  lastBumpSoundTime: 0
+};
 
 const stars = [];
 for (let i = 0; i < STAR_COUNT; i++) {
@@ -417,9 +420,9 @@ class Bullet {
     this.size = 5;
   }
 
-  move() {
-    this.x += this.speed * Math.cos(this.angle);
-    this.y += this.speed * Math.sin(this.angle);
+  move(deltaFactor) {
+    this.x += this.speed * Math.cos(this.angle) * deltaFactor;
+    this.y += this.speed * Math.sin(this.angle) * deltaFactor;
   }
 
   draw() {
@@ -500,10 +503,10 @@ class Asteroid {
     }
   }
 
-  move() {
+  move(deltaFactor) {
     if (this.exploded) {
       this.pieces.forEach(p => p.move());
-      this.explosionLife--;
+      this.explosionLife -= deltaFactor;
       if (this.explosionLife <= 0) {
         const index = asteroids.indexOf(this);
         if (index !== -1) asteroids.splice(index, 1);
@@ -512,8 +515,8 @@ class Asteroid {
     }
 
     // Update position with velocity
-    this.x += this.velX;
-    this.y += this.velY;
+    this.x += this.velX * deltaFactor;
+    this.y += this.velY * deltaFactor;
 
     // Boundary checks with bounce
     const buffer = this.hitRadius;
@@ -533,7 +536,7 @@ class Asteroid {
     }
 
     // Apply rotation
-    this.rotationAngle += this.rotationSpeed;
+    this.rotationAngle += this.rotationSpeed * deltaFactor;
 
     // Handle fade-in effect
     const elapsed = Date.now() - this.spawnTime;
@@ -730,10 +733,10 @@ class ExplosionPiece {
     this.color = color;
   }
 
-  move() {
-    this.x += this.speed * Math.cos(this.angle);
-    this.y += this.speed * Math.sin(this.angle);
-    this.life--;
+  move(deltaFactor) {
+    this.x += this.speed * Math.cos(this.angle) * deltaFactor;
+    this.y += this.speed * Math.sin(this.angle) * deltaFactor;
+    this.life -= deltaFactor;
   }
 
   draw() {
@@ -792,13 +795,13 @@ class Star {
     this.baseColor = { r: 255, g: 255, b: 0 }; // Base yellow color in RGB
   }
 
-  move() {
+  move(deltaFactor) {
     // Initialize velocities if not present
     if (!this.velX) this.velX = this.speed * Math.cos(this.angle);
     if (!this.velY) this.velY = this.speed * Math.sin(this.angle);
 
-    this.x += this.velX;
-    this.y += this.velY;
+    this.x += this.velX * deltaFactor;
+    this.y += this.velY * deltaFactor;
 
     const buffer = this.hitRadius;
     if (this.x - buffer < 0) {
@@ -954,13 +957,13 @@ class Shield {
     this.opacity = 0;
   }
 
-  move() {
+  move(deltaFactor) {
     // Initialize velocities if not present
     if (!this.velX) this.velX = this.speed * Math.cos(this.angle);
     if (!this.velY) this.velY = this.speed * Math.sin(this.angle);
 
-    this.x += this.velX;
-    this.y += this.velY;
+    this.x += this.velX * deltaFactor;
+    this.y += this.velY * deltaFactor;
 
     const buffer = this.hitRadius;
     if (this.x - buffer < 0) {
@@ -1067,9 +1070,9 @@ class BlackHole {
     this.fadeOutDuration = 1000; // 1 second fade out
   }
 
-  move() {
-    this.x += this.speed * Math.cos(this.angle);
-    this.y += this.speed * Math.sin(this.angle);
+  move(deltaFactor) {
+    this.x += this.speed * Math.cos(this.angle) * deltaFactor;
+    this.y += this.speed * Math.sin(this.angle) * deltaFactor;
 
     const buffer = this.hitRadius; // Use visual hit radius for boundary
     if (this.x - buffer < 0) {
@@ -1087,7 +1090,7 @@ class BlackHole {
       this.angle = -this.angle;
     }
 
-    this.rotationAngle += this.rotationSpeed;
+    this.rotationAngle += this.rotationSpeed * deltaFactor;
 
     const elapsed = Date.now() - this.spawnTime;
     if (elapsed < this.fadeInDuration) {
@@ -1230,10 +1233,10 @@ class PointText {
     this.fontSize = 14;
   }
 
-  update() {
-    this.y += this.velocityY;
+  update(deltaFactor) {
+    this.y += this.velocityY * deltaFactor;
     this.opacity = Math.max(0, this.life / 60); // Ensure opacity goes to 0
-    this.life--;
+    this.life -= deltaFactor;
   }
 
   draw() {
@@ -1275,7 +1278,7 @@ function drawStars() {
   });
 }
 
-function drawPlayer() {
+function drawPlayer(deltaFactor) {
   if (player.exploded) {
     player.pieces.forEach(p => p.draw());
     return;
@@ -1321,7 +1324,7 @@ function drawPlayer() {
   ctx.scale(player.pulseScale * player.shootScale * scale, player.pulseScale * player.shootScale * scale);
 
   // Main body with gradient
-  ctx.fillStyle = ROCKET_COLOR;
+  ctx.fillStyle = rocketColor;
   ctx.beginPath();
   ctx.moveTo(-player.bodyWidth / 2, player.bodyLength);
   ctx.quadraticCurveTo(-player.bodyWidth / 4, 0, -player.bodyWidth / 2, -player.bodyLength);
@@ -1381,7 +1384,7 @@ function drawPlayer() {
     ctx.lineTo(0, player.bodyLength + thrustSize);
     ctx.lineTo(player.bodyWidth / 3, player.bodyLength);
     ctx.fill();
-    player.thrustFrame++;
+    player.thrustFrame += deltaFactor;
   }
 
   ctx.restore(); // Restore after drawing the rocket
@@ -1491,16 +1494,16 @@ function updateHighScore() {
   }
 }
 
-function update() {
+function update(deltaFactor) {
   if (!gameStarted) {
-    asteroids.forEach(a => a.move());
-    powerUps.forEach(p => p.move());
+    asteroids.forEach(a => a.move(deltaFactor));
+    powerUps.forEach(p => p.move(deltaFactor));
     return;
   }
 
   // Update shield rotation
   if (player.hasShield) {
-    player.shieldAngle += (Math.PI * 2) / (SHIELD_ROTATION_DURATION / 16);
+    player.shieldAngle += ((Math.PI * 2) / (SHIELD_ROTATION_DURATION / 16)) * deltaFactor;
     const shieldElapsed = Date.now() - player.shieldStartTime;
     if (shieldElapsed >= SHIELD_DURATION) {
       player.hasShield = false;
@@ -1509,7 +1512,7 @@ function update() {
   }
 
   if (player.exploded) {
-    player.pieces.forEach(p => p.move());
+    player.pieces.forEach(p => p.move(deltaFactor));
     player.pieces = player.pieces.filter(p => p.life > 0);
     if (player.pieces.length === 0) {
       gameOverDisplay.style.display = 'block';
@@ -1517,8 +1520,8 @@ function update() {
       updateHighScore();
     }
   } else {
-    const maxRotationSpeed = 0.075;
-    const rotationEasing = 0.2;
+    const maxRotationSpeed = 0.06;
+    const rotationEasing = 0.1;
 
     // Target rotation speed based on keyboard input
     let targetRotationSpeed = 0;
@@ -1547,7 +1550,7 @@ function update() {
     }
 
     if (Math.abs(player.rotationSpeed) > 0.001) {
-      player.angle += player.rotationSpeed;
+      player.angle += player.rotationSpeed * deltaFactor;
     } else {
       player.rotationSpeed = 0;
     }
@@ -1631,8 +1634,8 @@ function update() {
       player.velY = (player.velY / speed) * player.maxSpeed;
     }
 
-    player.x += player.velX;
-    player.y += player.velY;
+    player.x += player.velX * deltaFactor;
+    player.y += player.velY * deltaFactor;
 
     // Boundary checks with bounce
     let playBumpSound = false;
@@ -1677,18 +1680,18 @@ function update() {
     }
 
     if (player.pulseTimer > 0) {
-      player.pulseTimer--;
+      player.pulseTimer -= deltaFactor;
       if (player.pulseTimer <= 0) player.pulseScale = 1;
     }
 
     if (player.shootTimer > 0) {
-      player.shootTimer--;
+      player.shootTimer -= deltaFactor;
       if (player.shootTimer <= 0) player.shootScale = 1;
       else player.shootScale = 1 + 0.15 * (player.shootTimer / 10);
     }
 
     bullets = bullets.filter(b => {
-      b.move();
+      b.move(deltaFactor);
       return b.x >= 0 && b.x <= canvas.width && b.y >= 0 && b.y <= canvas.height;
     });
 
@@ -1747,7 +1750,7 @@ function update() {
             for (let j = 0; j < 20; j++) {
               const angle = Math.random() * Math.PI * 2;
               const size = Math.random() * 5 + 2;
-              player.pieces.push(new ExplosionPiece(player.x, player.y, angle, size, ROCKET_COLOR));
+              player.pieces.push(new ExplosionPiece(player.x, player.y, angle, size, rocketColor));
             }
             shakeCanvas();
             bullets = []; // Clear bullets as game ends
@@ -1798,7 +1801,7 @@ function update() {
               for (let j = 0; j < 20; j++) {
                 const angle = Math.random() * Math.PI * 2;
                 const size = Math.random() * 5 + 2;
-                player.pieces.push(new ExplosionPiece(player.x, player.y, angle, size, ROCKET_COLOR));
+                player.pieces.push(new ExplosionPiece(player.x, player.y, angle, size, rocketColor));
               }
               shakeCanvas();
               bullets = [];
@@ -1934,7 +1937,7 @@ function update() {
 
   // Update point texts
   pointTexts = pointTexts.filter(pt => pt.life > 0);
-  pointTexts.forEach(pt => pt.update());
+  pointTexts.forEach(pt => pt.update(deltaFactor));
 
   // Asteroid-asteroid collisions
   for (let i = 0; i < asteroids.length; i++) {
@@ -2014,9 +2017,9 @@ function update() {
   });
 
   // Update positions
-  asteroids.forEach(a => a.move());
-  powerUps.forEach(p => p.move());
-  blackHoles.forEach(bh => bh.move());
+  asteroids.forEach(a => a.move(deltaFactor));
+  powerUps.forEach(p => p.move(deltaFactor));
+  blackHoles.forEach(bh => bh.move(deltaFactor));
 }
 
 function formatTime(milliseconds) {
@@ -2036,7 +2039,7 @@ function formatTime(milliseconds) {
   );
 }
 
-function draw() {
+function draw(deltaFactor) {
   ctx.save(); // Save the context state before applying transformations
 
   if (isShaking) {
@@ -2097,7 +2100,7 @@ function draw() {
   blackHoles.forEach(bh => bh.draw());
   asteroids.forEach(a => a.draw());
   powerUps.forEach(p => p.draw());
-  drawPlayer();
+  drawPlayer(deltaFactor);
   bullets.forEach(b => b.draw());
   scoreDisplay.textContent = `Score: ${score}`;
   accuracyDisplay.textContent = `Accuracy: ${shotsFired > 0 ? Math.round((hits / shotsFired) * 100) : 0}%`;
@@ -2137,11 +2140,16 @@ function shakeCanvas() {
   shakeStartTime = Date.now();
 }
 
-function gameLoop() {
+function gameLoop(timestamp = performance.now()) {
+  const deltaTime = Math.min(timestamp - lastTime, 100); // Cap delta to avoid large jumps (e.g., after pause)
+  const deltaFactor = deltaTime / TARGET_DELTA; // Scale factor based on target speed
+
   if (!isPaused) {
-    update();
-    draw();
+    update(deltaFactor);
+    draw(deltaFactor);
   }
+
+  lastTime = timestamp;
   requestAnimationFrame(gameLoop);
 }
 
@@ -2309,7 +2317,7 @@ function loadSettings() {
 
   // Load rocket color preference
   const savedColor = localStorage.getItem('rocketColor') || 'blue';
-  ROCKET_COLOR = ROCKET_COLORS[savedColor] || ROCKET_COLORS.blue;
+  rocketColor = ROCKET_COLORS[savedColor] || ROCKET_COLORS.blue;
   const rocketColorInputs = document.querySelectorAll('input[name="rocketColor"]');
   rocketColorInputs.forEach(input => {
     input.checked = input.value === savedColor;
@@ -2325,7 +2333,7 @@ zeroGravityToggle.addEventListener('change', () => {
 document.querySelectorAll('input[name="rocketColor"]').forEach(input => {
   input.addEventListener('change', () => {
     const selectedColor = input.value;
-    ROCKET_COLOR = ROCKET_COLORS[selectedColor];
+    rocketColor = ROCKET_COLORS[selectedColor];
     localStorage.setItem('rocketColor', selectedColor);
   });
 });
