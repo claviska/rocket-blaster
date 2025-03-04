@@ -34,12 +34,12 @@ const STARTING_ASTEROIDS = 3;
 const INCREASE_ASTEROIDS_EVERY_N_HITS = 5;
 const BLACK_HOLE_SIZE = ASTEROID_MAX_SIZE * 1.75;
 const BLACK_HOLE_DURATION = 10000; // 10 seconds
-const BLACK_HOLE_GRAVITY_STRENGTH = 0.15;
+const BLACK_HOLE_GRAVITY_STRENGTH = 0.2;
 const BLACK_HOLE_ROTATION_SPEED = 0.075;
 const BLACK_HOLE_SPAWN_MIN = 15000; // 15 seconds
-const BLACK_HOLE_SPAWN_MAX = 60000; // 60 seconds
+const BLACK_HOLE_SPAWN_MAX = 45000; // 45 seconds
 const STAR_SPAWN_MIN = 60000; // 60 seconds
-const STAR_SPAWN_MAX = 100000; // 100 seconds
+const STAR_SPAWN_MAX = 80000; // 80 seconds
 const SHIELD_SPAWN_MIN = 30000; // 30 seconds
 const SHIELD_SPAWN_MAX = 60000; // 60 seconds
 const SHIELD_DURATION = 8000; // 8 seconds
@@ -1227,7 +1227,7 @@ class PointText {
     this.opacity = 1;
     this.life = 60; // Frames to live (about 1 second at 60fps)
     this.velocityY = -1; // Move upward
-    this.fontSize = 13;
+    this.fontSize = 14;
   }
 
   update() {
@@ -1733,14 +1733,26 @@ function update() {
       }
     }
 
-    // Player-black hole collision (no destruction, gravity only)
+    // Player-black hole collision (destruction at center)
     if (!player.exploded) {
       for (let i = 0; i < blackHoles.length; i++) {
         if (Date.now() - gameStartTime > 3000 && blackHoles[i].canCollide()) {
           const dx = player.x - blackHoles[i].x;
           const dy = player.y - blackHoles[i].y;
           const distance = Math.sqrt(dx * dx + dy * dy);
-          // No destruction; gravity is applied later via applyGravity
+          if (distance < blackHoles[i].collisionRadius) {
+            // Check against collision radius (center)
+            player.exploded = true;
+            playSound('game-over');
+            for (let j = 0; j < 20; j++) {
+              const angle = Math.random() * Math.PI * 2;
+              const size = Math.random() * 5 + 2;
+              player.pieces.push(new ExplosionPiece(player.x, player.y, angle, size, ROCKET_COLOR));
+            }
+            shakeCanvas();
+            bullets = []; // Clear bullets as game ends
+            updateHighScore(); // Update high score on game end
+          }
         }
       }
     }
