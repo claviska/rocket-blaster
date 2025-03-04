@@ -324,7 +324,7 @@ function handleRocketTap(e) {
 
   for (let i = 0; i < touches.length; i++) {
     const touch = touches[i];
-    // Divide by scaleFactor (multiply by its inverse)
+    // Adjust for scaleFactor
     const touchX = (touch.clientX - canvasRect.left) / scaleFactor;
     const touchY = (touch.clientY - canvasRect.top) / scaleFactor;
 
@@ -336,17 +336,30 @@ function handleRocketTap(e) {
       continue;
     }
 
-    // Calculate distance from touch to player center
-    const dx = touchX - player.x;
-    const dy = touchY - player.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
+    // Define rocket's bounding box
+    const rocketWidth = player.bodyWidth + player.finSize * 1.2; // Full width including fins
+    const rocketHeight = player.bodyLength + player.noseLength + player.finSize; // Full height including nose and fins
+    const padding = 10; // Extra pixels around the rocket for easier tapping
 
-    // Check if tap is within player's hit radius
-    if (distance <= player.hitRadius) {
+    // Calculate hit box dimensions, ensuring minimum 44px (adjusted for scaleFactor)
+    const minSize = 44 / scaleFactor; // Minimum size in canvas coordinates
+    const hitWidth = Math.max(rocketWidth + padding * 2, minSize);
+    const hitHeight = Math.max(rocketHeight + padding * 2, minSize);
+
+    // Define hit box boundaries, centered on player position
+    const halfWidth = hitWidth / 2;
+    const halfHeight = hitHeight / 2;
+    const left = player.x - halfWidth;
+    const right = player.x + halfWidth;
+    const top = player.y - halfHeight;
+    const bottom = player.y + halfHeight;
+
+    // Check if touch intersects the hit box
+    if (touchX >= left && touchX <= right && touchY >= top && touchY <= bottom) {
       e.preventDefault();
       player.tracerEnabled = !player.tracerEnabled;
       playSound('click');
-      break;
+      break; // Exit after handling one valid tap
     }
   }
 }
