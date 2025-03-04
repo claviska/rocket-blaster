@@ -33,7 +33,8 @@ const BULLET_GRAVITY_MULTIPLIER = 20;
 const STARTING_ASTEROIDS = 3;
 const INCREASE_ASTEROIDS_EVERY_N_HITS = 5;
 const BLACK_HOLE_SIZE = ASTEROID_MAX_SIZE * 1.75;
-const BLACK_HOLE_DURATION = 10000; // 10 seconds
+const BLACK_HOLE_DURATION_MIN = 8000; // 8 seconds minimum
+const BLACK_HOLE_DURATION_MAX = 15000; // 15 seconds maximum
 const BLACK_HOLE_GRAVITY_STRENGTH = 0.2;
 const BLACK_HOLE_ROTATION_SPEED = 0.075;
 const BLACK_HOLE_SPAWN_MIN = 15000; // 15 seconds
@@ -1062,7 +1063,7 @@ class BlackHole {
     this.fadeInDuration = 1000;
     this.scale = 0;
     this.opacity = 0;
-    this.lifeTime = BLACK_HOLE_DURATION;
+    this.lifeTime = BLACK_HOLE_DURATION_MIN + Math.random() * (BLACK_HOLE_DURATION_MAX - BLACK_HOLE_DURATION_MIN);
     this.fadeOutDuration = 1000; // 1 second fade out
   }
 
