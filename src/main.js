@@ -29,7 +29,7 @@ const ASTEROID_POINTS_MAX = 250; // Points for smallest asteroids
 const ASTEROID_POINTS_STEP = 50; // Step interval for points
 const BULLET_SPEED = 15;
 const BULLET_COLOR = '#FFBF00';
-const BULLET_GRAVITY_MULTIPLIER = 10;
+const BULLET_GRAVITY_MULTIPLIER = 20;
 const STARTING_ASTEROIDS = 3;
 const INCREASE_ASTEROIDS_EVERY_N_HITS = 5;
 const BLACK_HOLE_SIZE = ASTEROID_MAX_SIZE * 1.75;
@@ -56,8 +56,7 @@ const BACKGROUND_CYCLE_DURATION = 28000; // number of milliseconds per transitio
 const BACKGROUND_COLORS = [
   { top: '#06000b', bottom: '#1c042f' }, // Original dark blue to purple
   { top: '#06000b', bottom: '#001133' }, // navy blue
-  { top: '#06000b', bottom: '#090216' }, // midnight
-  { top: '#06000b', bottom: '#1b0212' } // rose
+  { top: '#06000b', bottom: '#090216' } // midnight
 ];
 
 const canvas = document.getElementById('gameCanvas');
