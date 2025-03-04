@@ -171,6 +171,7 @@ window.addEventListener('keydown', e => {
   if (e.key === 'Shift' && !e.repeat) {
     // Check !e.repeat to prevent toggle on key hold
     player.tracerEnabled = !player.tracerEnabled;
+    playSound('click');
   }
 
   // Add an asteroid when pressing backtick, only during active game play
@@ -314,6 +315,43 @@ function handleTouchEnd(e) {
   }
 }
 
+function handleRocketTap(e) {
+  if (!gameStarted || player.exploded) {
+    return;
+  }
+
+  const canvasRect = canvas.getBoundingClientRect();
+  const touches = e.touches;
+
+  for (let i = 0; i < touches.length; i++) {
+    const touch = touches[i];
+    // Divide by scaleFactor (multiply by its inverse)
+    const touchX = (touch.clientX - canvasRect.left) / scaleFactor;
+    const touchY = (touch.clientY - canvasRect.top) / scaleFactor;
+
+    // Skip if touch is on directional control or shoot button
+    if (
+      isTouchingButton(touch.clientX, touch.clientY, directionalControl) ||
+      isTouchingButton(touch.clientX, touch.clientY, shootButton)
+    ) {
+      continue;
+    }
+
+    // Calculate distance from touch to player center
+    const dx = touchX - player.x;
+    const dy = touchY - player.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // Check if tap is within player's hit radius
+    if (distance <= player.hitRadius) {
+      e.preventDefault();
+      player.tracerEnabled = !player.tracerEnabled;
+      playSound('click');
+      break;
+    }
+  }
+}
+
 function updateJoystick(touch) {
   const rect = directionalControl.getBoundingClientRect();
   const centerX = rect.left + rect.width / 2;
@@ -350,6 +388,7 @@ function isTouchingButton(x, y, button) {
   return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
 }
 
+document.addEventListener('touchstart', handleRocketTap, { passive: false });
 directionalControl.addEventListener('touchstart', handleTouchStart);
 directionalControl.addEventListener('touchmove', handleTouchMove);
 directionalControl.addEventListener('touchend', handleTouchEnd);
