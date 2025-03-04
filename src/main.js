@@ -51,7 +51,6 @@ const STAR_COUNT = 50;
 const SOUND_POOL_SIZE = 10;
 const TRACER_LENGTH = 400; // Length of the tracer in pixels
 const TRACER_COLOR = '#FFBF00'; // Tracer color, matching BULLET_COLOR by default
-const TRACER_DASH_SIZE = 8; // Size of dashes and gaps in pixels
 const TRACER_WIDTH = 1.5;
 const BACKGROUND_CYCLE_DURATION = 28000; // number of milliseconds per transition
 const BACKGROUND_COLORS = [
@@ -1390,14 +1389,11 @@ function drawPlayer() {
     gradient.addColorStop(0.5, TRACER_COLOR); // Full opacity in middle
     gradient.addColorStop(1, `${TRACER_COLOR}33`); // 20% opacity at end
 
-    // Subtle flicker effect
-    const flicker = 1 + Math.sin(Date.now() * 0.05) * 0.1; // Adjust 0.05 for flicker speed
-
     ctx.beginPath();
     ctx.moveTo(startX, 0);
     ctx.lineTo(endX, 0);
     ctx.strokeStyle = gradient;
-    ctx.lineWidth = TRACER_WIDTH * flicker; // Flicker the width
+    ctx.lineWidth = TRACER_WIDTH;
     ctx.shadowBlur = 10; // Glow effect
     ctx.shadowColor = `${TRACER_COLOR}CC`; // ~80% opacity for glow (hex alpha: CC)
     ctx.stroke();
