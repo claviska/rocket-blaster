@@ -23,6 +23,7 @@ const ASTEROID_COLORS = [
 ];
 const ASTEROID_MIN_SIZE = 20;
 const ASTEROID_MAX_SIZE = 45;
+const ASTEROID_MAX_SPEED = 10; // Maximum speed for asteroids in pixels per frame
 const ASTEROID_SPAWN_MIN = 1000; // 1 second
 const ASTEROID_SPAWN_MAX = 4000; // 4 seconds
 const ASTEROID_POINTS_MIN = 50; // Points for largest asteroids
@@ -38,8 +39,8 @@ const BLACK_HOLE_DURATION_MIN = 8000; // 8 seconds minimum
 const BLACK_HOLE_DURATION_MAX = 15000; // 15 seconds maximum
 const BLACK_HOLE_GRAVITY_STRENGTH = 0.2;
 const BLACK_HOLE_ROTATION_SPEED = 0.075;
-const BLACK_HOLE_SPAWN_MIN = 15000; // 15 seconds
-const BLACK_HOLE_SPAWN_MAX = 45000; // 45 seconds
+const BLACK_HOLE_SPAWN_MIN = 1500; // 15 seconds
+const BLACK_HOLE_SPAWN_MAX = 4500; // 45 seconds
 const STAR_SPAWN_MIN = 60000; // 60 seconds
 const STAR_SPAWN_MAX = 80000; // 80 seconds
 const SHIELD_SPAWN_MIN = 30000; // 30 seconds
@@ -534,6 +535,18 @@ class Asteroid {
       this.y = canvas.height - buffer;
       this.velY = -Math.abs(this.velY);
     }
+
+    // Cap the speed
+    const currentSpeed = Math.sqrt(this.velX * this.velX + this.velY * this.velY);
+    if (currentSpeed > ASTEROID_MAX_SPEED) {
+      const scale = ASTEROID_MAX_SPEED / currentSpeed;
+      this.velX *= scale;
+      this.velY *= scale;
+    }
+
+    // Update angle and speed for consistency (optional, since velX and velY are now the source of truth)
+    this.speed = Math.sqrt(this.velX * this.velX + this.velY * this.velY);
+    this.angle = Math.atan2(this.velY, this.velX);
 
     // Apply rotation
     this.rotationAngle += this.rotationSpeed * deltaFactor;
