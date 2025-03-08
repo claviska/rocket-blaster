@@ -371,7 +371,7 @@ function updateJoystick(touch) {
   const rect = directionalControl.getBoundingClientRect();
   const centerX = rect.left + rect.width / 2;
   const centerY = rect.top + rect.height / 2;
-  const maxDistance = rect.width / 2 - joystick.offsetWidth / 2;
+  const maxDistance = (rect.width / 2 - joystick.offsetWidth / 2) * 1.5;
 
   let dx = touch.clientX - centerX;
   let dy = touch.clientY - centerY;
