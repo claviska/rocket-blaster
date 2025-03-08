@@ -23,7 +23,7 @@ const ASTEROID_COLORS = [
 ];
 const ASTEROID_MIN_SIZE = 20;
 const ASTEROID_MAX_SIZE = 45;
-const ASTEROID_MAX_SPEED = 10; // Maximum speed for asteroids in pixels per frame
+const ASTEROID_MAX_SPEED = 5; // Maximum speed for asteroids in pixels per frame
 const ASTEROID_SPAWN_MIN = 1000; // 1 second
 const ASTEROID_SPAWN_MAX = 4000; // 4 seconds
 const ASTEROID_POINTS_MIN = 50; // Points for largest asteroids
@@ -1776,7 +1776,7 @@ function update(deltaFactor) {
           if (distance < blackHoles[i].collisionRadius) {
             // Check against collision radius (center)
             player.exploded = true;
-            playSound('game-over');
+            playSound('black-hole-destroy');
             for (let j = 0; j < 20; j++) {
               const angle = Math.random() * Math.PI * 2;
               const size = Math.random() * 5 + 2;
