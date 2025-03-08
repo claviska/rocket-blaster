@@ -41,6 +41,7 @@ const BLACK_HOLE_GRAVITY_STRENGTH = 0.2;
 const BLACK_HOLE_ROTATION_SPEED = 0.075;
 const BLACK_HOLE_SPAWN_MIN = 1500; // 15 seconds
 const BLACK_HOLE_SPAWN_MAX = 4500; // 45 seconds
+const BLACK_HOLE_MIN_SPAWN_DISTANCE = 100; // Minimum distance in pixels from player for black hole spawn
 const STAR_SPAWN_MIN = 60000; // 60 seconds
 const STAR_SPAWN_MAX = 80000; // 80 seconds
 const SHIELD_SPAWN_MIN = 30000; // 30 seconds
@@ -1038,31 +1039,46 @@ class Shield {
 
 class BlackHole {
   constructor() {
-    const side = Math.floor(Math.random() * 4);
     let x, y, angle;
+    let attempts = 0;
+    const maxAttempts = 10; // Limit to prevent infinite loops
+    let distance; // Declare distance outside the loop
 
-    switch (side) {
-      case 0:
-        x = Math.random() * canvas.width;
-        y = -10;
-        angle = Math.random() * Math.PI - Math.PI / 2;
-        break;
-      case 1:
-        x = canvas.width + 10;
-        y = Math.random() * canvas.height;
-        angle = Math.random() * Math.PI + Math.PI;
-        break;
-      case 2:
-        x = Math.random() * canvas.width;
-        y = canvas.height + 10;
-        angle = Math.random() * Math.PI + Math.PI / 2;
-        break;
-      case 3:
-        x = -10;
-        y = Math.random() * canvas.height;
-        angle = Math.random() * Math.PI;
-        break;
-    }
+    do {
+      const side = Math.floor(Math.random() * 4);
+      switch (side) {
+        case 0: // Top
+          x = Math.random() * canvas.width;
+          y = -10;
+          angle = Math.random() * Math.PI - Math.PI / 2;
+          break;
+        case 1: // Right
+          x = canvas.width + 10;
+          y = Math.random() * canvas.height;
+          angle = Math.random() * Math.PI + Math.PI;
+          break;
+        case 2: // Bottom
+          x = Math.random() * canvas.width;
+          y = canvas.height + 10;
+          angle = Math.random() * Math.PI + Math.PI / 2;
+          break;
+        case 3: // Left
+          x = -10;
+          y = Math.random() * canvas.height;
+          angle = Math.random() * Math.PI;
+          break;
+      }
+
+      // Calculate distance from player
+      const dx = x - player.x;
+      const dy = y - player.y;
+      distance = Math.sqrt(dx * dx + dy * dy); // Assign to outer distance variable
+
+      attempts++;
+      // Continue if too close and under attempt limit
+    } while (distance < BLACK_HOLE_MIN_SPAWN_DISTANCE && attempts < maxAttempts);
+
+    // If we exceed attempts, we'll accept the last position, but this is rare with a decent-sized canvas
     this.x = x;
     this.y = y;
     this.speed = (Math.random() * 2 + 1) * 0.45;
