@@ -1087,7 +1087,7 @@ class BlackHole {
     this.angle = angle;
     this.baseHitRadius = this.baseSize * 1.2; // Base hit radius for visuals
     this.hitRadius = this.baseHitRadius; // Current hit radius for visuals, now fixed
-    this.collisionRadius = this.baseHitRadius * 0.1; // Collision radius is 10% of base hit radius
+    this.collisionRadius = this.baseHitRadius;
     this.rotationAngle = 0;
     this.rotationSpeed = BLACK_HOLE_ROTATION_SPEED;
     this.spawnTime = Date.now();
@@ -1910,7 +1910,7 @@ function update(deltaFactor) {
       }
     }
 
-    // Asteroid-black hole collision (no destruction, gravity only)
+    // Asteroid-black hole collision (destruction near center)
     if (blackHoles.length > 0) {
       for (let i = blackHoles.length - 1; i >= 0; i--) {
         const bh = blackHoles[i];
@@ -1921,7 +1921,14 @@ function update(deltaFactor) {
               const dx = asteroid.x - bh.x;
               const dy = asteroid.y - bh.y;
               const distance = Math.sqrt(dx * dx + dy * dy);
-              // No destruction; gravity is applied later via applyGravity
+
+              // Check if asteroid is within the black hole's collision radius
+              if (distance < bh.collisionRadius) {
+                asteroid.exploded = true; // Mark as destroyed
+                asteroid.pieces = []; // No explosion pieces
+                asteroid.explosionLife = 0; // Immediate removal next frame
+                playSound('black-hole-destroy'); // Play destruction sound
+              }
             }
           }
         }
