@@ -10,7 +10,7 @@ const ROCKET_COLORS = {
   gray: '#686868'
 };
 const ROCKET_ACCENT = '#FFFFFF';
-const ROCKET_ROTATION_SPEED = 0.1;
+const ROCKET_ROTATION_SPEED = 0.08;
 const ROCKET_ROTATION_EASING = 0.25;
 const THRUST_COLORS = ['#FF6B00', '#FF9500', '#FFC107'];
 const ASTEROID_COLORS = [
@@ -24,7 +24,8 @@ const ASTEROID_COLORS = [
   '#8c8c8c' // Gray
 ];
 const ASTEROID_MIN_SIZE = 20;
-const ASTEROID_MAX_SIZE = 60;
+const ASTEROID_MAX_SIZE = 50;
+const ASTEROID_MAX_SPEED = 5; // Maximum speed for asteroids in pixels per frame
 const ASTEROID_SPAWN_MIN = 1000; // 1 second
 const ASTEROID_SPAWN_MAX = 4000; // 4 seconds
 const ASTEROID_POINTS_MIN = 50; // Points for largest asteroids
@@ -46,6 +47,7 @@ const STAR_SPAWN_MIN = 20000; // 20 seconds
 const STAR_SPAWN_MAX = 60000; // 60 seconds
 const SHIELD_SPAWN_MIN = 20000; // 20 seconds
 const SHIELD_SPAWN_MAX = 60000; // 60 seconds
+const BLACK_HOLE_MIN_SPAWN_DISTANCE = 100; // Minimum distance in pixels from player for black hole spawn
 const SHIELD_DURATION = 10000; // 10 seconds
 const SHIELD_ROTATION_DURATION = 2500;
 const SHIELD_BLINK_DURATION = 2000; // 2 seconds blink warning
