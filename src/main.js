@@ -373,7 +373,7 @@ function updateJoystick(touch) {
   const rect = directionalControl.getBoundingClientRect();
   const centerX = rect.left + rect.width / 2;
   const centerY = rect.top + rect.height / 2;
-  const maxDistance = rect.width / 2 - joystick.offsetWidth / 2;
+  const maxDistance = (rect.width / 2 - joystick.offsetWidth / 2) * 1.5;
 
   let dx = touch.clientX - centerX;
   let dy = touch.clientY - centerY;
@@ -536,6 +536,18 @@ class Asteroid {
       this.y = canvas.height - buffer;
       this.velY = -Math.abs(this.velY);
     }
+
+    // Cap the speed
+    const currentSpeed = Math.sqrt(this.velX * this.velX + this.velY * this.velY);
+    if (currentSpeed > ASTEROID_MAX_SPEED) {
+      const scale = ASTEROID_MAX_SPEED / currentSpeed;
+      this.velX *= scale;
+      this.velY *= scale;
+    }
+
+    // Update angle and speed for consistency (optional, since velX and velY are now the source of truth)
+    this.speed = Math.sqrt(this.velX * this.velX + this.velY * this.velY);
+    this.angle = Math.atan2(this.velY, this.velX);
 
     // Apply rotation
     this.rotationAngle += this.rotationSpeed * deltaFactor;
@@ -1028,31 +1040,46 @@ class Shield {
 
 class BlackHole {
   constructor() {
-    const side = Math.floor(Math.random() * 4);
     let x, y, angle;
+    let attempts = 0;
+    const maxAttempts = 10; // Limit to prevent infinite loops
+    let distance; // Declare distance outside the loop
 
-    switch (side) {
-      case 0:
-        x = Math.random() * canvas.width;
-        y = -10;
-        angle = Math.random() * Math.PI - Math.PI / 2;
-        break;
-      case 1:
-        x = canvas.width + 10;
-        y = Math.random() * canvas.height;
-        angle = Math.random() * Math.PI + Math.PI;
-        break;
-      case 2:
-        x = Math.random() * canvas.width;
-        y = canvas.height + 10;
-        angle = Math.random() * Math.PI + Math.PI / 2;
-        break;
-      case 3:
-        x = -10;
-        y = Math.random() * canvas.height;
-        angle = Math.random() * Math.PI;
-        break;
-    }
+    do {
+      const side = Math.floor(Math.random() * 4);
+      switch (side) {
+        case 0: // Top
+          x = Math.random() * canvas.width;
+          y = -10;
+          angle = Math.random() * Math.PI - Math.PI / 2;
+          break;
+        case 1: // Right
+          x = canvas.width + 10;
+          y = Math.random() * canvas.height;
+          angle = Math.random() * Math.PI + Math.PI;
+          break;
+        case 2: // Bottom
+          x = Math.random() * canvas.width;
+          y = canvas.height + 10;
+          angle = Math.random() * Math.PI + Math.PI / 2;
+          break;
+        case 3: // Left
+          x = -10;
+          y = Math.random() * canvas.height;
+          angle = Math.random() * Math.PI;
+          break;
+      }
+
+      // Calculate distance from player
+      const dx = x - player.x;
+      const dy = y - player.y;
+      distance = Math.sqrt(dx * dx + dy * dy); // Assign to outer distance variable
+
+      attempts++;
+      // Continue if too close and under attempt limit
+    } while (distance < BLACK_HOLE_MIN_SPAWN_DISTANCE && attempts < maxAttempts);
+
+    // If we exceed attempts, we'll accept the last position, but this is rare with a decent-sized canvas
     this.x = x;
     this.y = y;
     this.speed = (Math.random() * 2 + 1) * 0.45;
@@ -1061,7 +1088,7 @@ class BlackHole {
     this.angle = angle;
     this.baseHitRadius = this.baseSize * 1.2; // Base hit radius for visuals
     this.hitRadius = this.baseHitRadius; // Current hit radius for visuals, now fixed
-    this.collisionRadius = this.baseHitRadius * 0.1; // Collision radius is 10% of base hit radius
+    this.collisionRadius = this.baseHitRadius;
     this.rotationAngle = 0;
     this.rotationSpeed = BLACK_HOLE_ROTATION_SPEED;
     this.spawnTime = Date.now();
@@ -1453,6 +1480,7 @@ function restartGame() {
   player.shieldVisible = true;
   player.shieldExpireSoundPlayed = false;
   player.isThrusting = false;
+  player.tracerEnabled = false;
   wasThrusting = false;
   bullets = [];
   asteroids = Array(STARTING_ASTEROIDS)
@@ -1746,7 +1774,7 @@ function update(deltaFactor) {
           if (distance < blackHoles[i].collisionRadius) {
             // Check against collision radius (center)
             player.exploded = true;
-            playSound('game-over');
+            playSound('black-hole-destroy');
             for (let j = 0; j < 20; j++) {
               const angle = Math.random() * Math.PI * 2;
               const size = Math.random() * 5 + 2;
@@ -1881,7 +1909,7 @@ function update(deltaFactor) {
       }
     }
 
-    // Asteroid-black hole collision (no destruction, gravity only)
+    // Asteroid-black hole collision (destruction near center)
     if (blackHoles.length > 0) {
       for (let i = blackHoles.length - 1; i >= 0; i--) {
         const bh = blackHoles[i];
@@ -1892,7 +1920,14 @@ function update(deltaFactor) {
               const dx = asteroid.x - bh.x;
               const dy = asteroid.y - bh.y;
               const distance = Math.sqrt(dx * dx + dy * dy);
-              // No destruction; gravity is applied later via applyGravity
+
+              // Check if asteroid is within the black hole's collision radius
+              if (distance < bh.collisionRadius) {
+                asteroid.exploded = true; // Mark as destroyed
+                asteroid.pieces = []; // No explosion pieces
+                asteroid.explosionLife = 0; // Immediate removal next frame
+                playSound('black-hole-destroy'); // Play destruction sound
+              }
             }
           }
         }
