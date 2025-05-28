@@ -505,7 +505,7 @@ class Asteroid {
 
   move(deltaFactor) {
     if (this.exploded) {
-      this.pieces.forEach(p => p.move());
+      this.pieces.forEach(p => p.move(deltaFactor));
       this.explosionLife -= deltaFactor;
       if (this.explosionLife <= 0) {
         const index = asteroids.indexOf(this);
@@ -737,6 +737,7 @@ class ExplosionPiece {
     this.x += this.speed * Math.cos(this.angle) * deltaFactor;
     this.y += this.speed * Math.sin(this.angle) * deltaFactor;
     this.life -= deltaFactor;
+    this.speed *= 0.98;
   }
 
   draw() {
