@@ -10,6 +10,8 @@ const ROCKET_COLORS = {
   gray: '#686868'
 };
 const ROCKET_ACCENT = '#FFFFFF';
+const ROCKET_ROTATION_SPEED = 0.1;
+const ROCKET_ROTATION_EASING = 0.25;
 const THRUST_COLORS = ['#FF6B00', '#FF9500', '#FFC107'];
 const ASTEROID_COLORS = [
   '#de3333', // Red
@@ -125,8 +127,8 @@ const player = {
   angle: 0,
   velX: 0,
   velY: 0,
-  maxSpeed: 3.5,
-  acceleration: 0.1,
+  maxSpeed: 4,
+  acceleration: 0.2,
   bodyLength: 12,
   bodyWidth: 12,
   noseLength: 12,
@@ -1521,13 +1523,10 @@ function update(deltaFactor) {
       updateHighScore();
     }
   } else {
-    const maxRotationSpeed = 0.06;
-    const rotationEasing = 0.1;
-
     // Target rotation speed based on keyboard input
     let targetRotationSpeed = 0;
-    if (keys['ArrowLeft']) targetRotationSpeed = -maxRotationSpeed;
-    if (keys['ArrowRight']) targetRotationSpeed = maxRotationSpeed;
+    if (keys['ArrowLeft']) targetRotationSpeed = -ROCKET_ROTATION_SPEED;
+    if (keys['ArrowRight']) targetRotationSpeed = ROCKET_ROTATION_SPEED;
 
     // Joystick rotation and movement
     const joystickEngaged = Math.abs(touchState.directionX) > 0.2 || Math.abs(touchState.directionY) > 0.2;
@@ -1535,7 +1534,7 @@ function update(deltaFactor) {
     if (joystickEngaged) {
       targetAngle = Math.atan2(touchState.directionY, touchState.directionX);
       // Adjust rotation speed based on joystick X direction for smoother turning
-      targetRotationSpeed = maxRotationSpeed * touchState.directionX;
+      targetRotationSpeed = ROCKET_ROTATION_SPEED * touchState.directionX;
     }
 
     // Ease rotation toward target angle or apply rotation speed
@@ -1545,9 +1544,9 @@ function update(deltaFactor) {
       let angleDiff = targetAngle - player.angle;
       // Normalize angle difference to [-π, π]
       angleDiff = ((angleDiff + Math.PI) % (2 * Math.PI)) - Math.PI;
-      player.rotationSpeed = Math.max(-maxRotationSpeed, Math.min(maxRotationSpeed, angleDiff * 0.2));
+      player.rotationSpeed = Math.max(-ROCKET_ROTATION_SPEED, Math.min(ROCKET_ROTATION_SPEED, angleDiff * 0.2));
     } else {
-      player.rotationSpeed += (targetRotationSpeed - player.rotationSpeed) * rotationEasing;
+      player.rotationSpeed += (targetRotationSpeed - player.rotationSpeed) * ROCKET_ROTATION_EASING;
     }
 
     if (Math.abs(player.rotationSpeed) > 0.001) {
