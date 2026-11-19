@@ -19,7 +19,6 @@ const SPACE_INK = '#07020f'; // shadow color for sprites: deep violet, never gra
 const CREAM = '#fff1dc';
 const ROCKET_SCALE = 1.2;
 const ROCKET_SPRITE_SIZE = 56;
-const ROCKET_ROTATION_SPEED = 0.08;
 const ROCKET_ROTATION_EASING = 0.25;
 const NOSE_OFFSET = 22; // distance from ship center to nose tip
 const PLAYER_HIT_RADIUS = 10; // deliberately smaller than the ship so near misses feel fair
@@ -159,17 +158,29 @@ const SPORE_SPRITE_SIZE = 32;
 
 
 const HIGH_SCORE_KEY = 'highScore';
-const STAR_COUNT = 70;
 const TRACER_LENGTH = 400;
 const TRACER_COLOR = '#FFBF00';
 const TRACER_WIDTH = 1.5;
-const BACKGROUND_CYCLE_DURATION = 28000;
+// Deep field: the backdrop shared by the title screen and play. A violet base, cosmic-blue nebulae with a
+// whisper of cyan on their lit edges, and three parallax star layers. Each wave eases the nebulae one step
+// through NEBULA_PALETTES, a quiet "you've gone deeper" marker.
 const PHOSPHOR_PERSISTENCE = 0.55; // share of the previous frame still glowing after 1/60s
-const BACKGROUND_COLORS = [
-  { top: [6, 0, 11], bottom: [28, 4, 47] },
-  { top: [6, 0, 11], bottom: [0, 17, 51] },
-  { top: [6, 0, 11], bottom: [9, 2, 22] }
+const NEBULA_PALETTES = [
+  { a: '#2140ff', b: '#6a2cff', rim: '#3ff0ff' }, // cosmic blue and violet
+  { a: '#2a1bb0', b: '#1067ff', rim: '#5ff6ff' }, // indigo and azure
+  { a: '#5b20d6', b: '#1d4dff', rim: '#7fe9ff' }, // violet and blue
+  { a: '#0e3aa6', b: '#1aa6d6', rim: '#9ff8ff' } // deep sea and teal
 ];
+const NEBULA_ALPHA = 0.18; // how strongly the clouds show over the base (low: gameplay stays readable)
+const NEBULA_FADE = 4000; // ms to ease into a new wave's palette
+const NEBULA_RES = 0.5; // painted at half resolution, softened, then scaled up
+const STAR_LAYERS = [
+  // count per megapixel, size, brightness, parallax (share of the ship's offset), drift px/s
+  { density: 90, size: [0.4, 0.9], brightness: [0.25, 0.5], parallax: 0.015, drift: 1.5 },
+  { density: 50, size: [0.7, 1.4], brightness: [0.4, 0.75], parallax: 0.04, drift: 4 },
+  { density: 16, size: [1.2, 2.2], brightness: [0.6, 1], parallax: 0.08, drift: 9 }
+];
+const STAR_TINTS = ['#ffffff', '#ffffff', '#ffffff', '#b8ccff', '#9fe8ff']; // mostly white, some blue, a little cyan
 const SOUND_NAMES = [
   'asteroid-explode',
   'asteroid-spawn',
@@ -194,9 +205,10 @@ const scoreDisplay = $('score');
 const accuracyDisplay = $('accuracy');
 const hitsDisplay = $('hits');
 const livesDisplay = $('lives');
-const hangarPreview = $('hangarPreview');
-const hullSelector = $('hullSelector');
-const hullName = $('hullName');
+const shipTitles = $('shipTitles');
+const shipStats = $('shipStats');
+const shipDetails = $('shipDetails');
+const shipAnnounce = $('shipAnnounce');
 const comboDisplay = $('combo');
 const highScoreDisplay = $('highScore');
 const timerDisplay = $('timer');
@@ -271,13 +283,12 @@ const player = {
   velX: 0,
   velY: 0,
   rotationSpeed: 0,
-  maxSpeed: 4,
-  acceleration: 0.2,
   shootScale: 1,
   shootTimer: 0,
   exploded: false,
   deathTime: 0,
   respawnTime: 0,
+  arriveUntil: 0, // gliding in at the start of a run; no input, no hits
   lives: STARTING_LIVES,
   isThrusting: false,
   thrustSign: 1, // 1 = main engine (tail), -1 = retro thrust (nose)
@@ -287,7 +298,6 @@ const player = {
   well: null, // { x, y, opacity } while a pocket well is active
   shieldAngle: 0,
   lastShotTime: -Infinity,
-  shootCooldown: 200,
   tracerEnabled: false,
   lastBumpSoundTime: -Infinity
 };
@@ -446,22 +456,28 @@ window.addEventListener('resize', () => {
   });
   player.x = clamp(player.x, PLAYER_WALL_RADIUS, W - PLAYER_WALL_RADIUS);
   player.y = clamp(player.y, PLAYER_WALL_RADIUS, H - PLAYER_WALL_RADIUS);
-  stars.forEach(star => {
-    star.x = rand(0, W);
-    star.y = rand(0, H);
-  });
+  makeStars();
+  nebulae = [];
+  if (nebulaShown >= 0) showNebula(nebulaShown, true);
   draw(); // resizing clears the canvas; repaint now in case the loop is paused
 });
 
-const stars = Array.from({ length: STAR_COUNT }, () => ({
-  x: rand(0, W),
-  y: rand(0, H),
-  size: rand(0.5, 2.2),
-  brightness: rand(0.4, 1),
-  twinkle: Math.random() < 0.15,
-  twinkleSpeed: rand(0.002, 0.006),
-  depth: Math.random()
-}));
+let stars = [];
+function makeStars() {
+  stars = STAR_LAYERS.flatMap((layer, depth) =>
+    Array.from({ length: Math.round((layer.density * W * H) / 1e6) }, () => ({
+      x: rand(0, W),
+      y: rand(0, H),
+      layer: depth,
+      size: rand(...layer.size),
+      brightness: rand(...layer.brightness),
+      color: pick(STAR_TINTS),
+      twinkle: depth === 2 && Math.random() < 0.4,
+      twinkleSpeed: rand(0.002, 0.006)
+    }))
+  );
+}
+makeStars();
 
 //
 // Audio
@@ -514,11 +530,31 @@ window.addEventListener('keydown', e => {
   document.documentElement.classList.add('is-using-keyboard');
   keys[e.code] = true;
   if (isPlaying() && GAME_KEYS.has(e.code)) e.preventDefault();
+  // Start screen, wherever focus is: Enter launches, ↑↓ spin the ship wheel, ←→ cycle the paint (held keys
+  // repeat). Taking these ahead of the radio groups' own arrow keys keeps each key meaning one thing.
+  if (!gameStarted && !launchAt) {
+    const spin = { ArrowUp: -1, KeyW: -1, ArrowDown: 1, KeyS: 1 }[e.code];
+    const paint = { ArrowLeft: -1, KeyA: -1, ArrowRight: 1, KeyD: 1 }[e.code];
+    if ((e.code === 'Enter' || e.code === 'NumpadEnter') && !e.repeat) {
+      e.preventDefault();
+      startGame();
+    } else if (spin) {
+      e.preventDefault();
+      spinBy(spin);
+    } else if (paint) {
+      e.preventDefault();
+      stepPaint(paint);
+    } else if (e.code === 'KeyG' && !e.repeat) {
+      // G: Zero G (a quiet shortcut, no hint)
+      zeroGravityToggle.checked = !zeroGravityToggle.checked;
+      zeroGravityToggle.dispatchEvent(new Event('change'));
+    }
+  }
   if (e.repeat) return;
 
   if (e.key === 'Shift') toggleTracer();
-  typed = (typed + e.key.toLowerCase()).slice(-4);
-  if (typed === 'test' && isPlaying()) toggleTestDeck();
+  typed = (typed + e.key.toLowerCase()).slice(-3);
+  if (typed === 'dev' && isPlaying()) toggleTestDeck();
   if (!testDeck.hidden && /^Digit\d$/.test(e.code)) TEST_ACTIONS[(+e.code.slice(5) + 9) % 10]?.button.click();
   if (e.code === 'Backquote' && isPlaying()) asteroids.push(new Asteroid());
   if (e.code === 'KeyP' || e.code === 'Escape') setPaused(!isPaused);
@@ -540,7 +576,7 @@ function setPaused(paused) {
 }
 
 //
-// Test deck: type "test" while playing (or load the page with ?test) for spawn buttons; keys 1–9, 0 work too
+// Dev deck: type "dev" while playing (or load the page with ?dev) for spawn buttons; keys 1–9, 0 work too
 //
 let typed = '';
 const TEST_ACTIONS = [
@@ -781,11 +817,11 @@ function addHitstop(ms) {
 // Entities
 //
 class Bullet {
-  constructor(x, y, angle, counted) {
+  constructor(x, y, angle, counted, speed = BULLET_SPEED) {
     this.x = x;
     this.y = y;
-    this.velX = Math.cos(angle) * BULLET_SPEED;
-    this.velY = Math.sin(angle) * BULLET_SPEED;
+    this.velX = Math.cos(angle) * speed;
+    this.velY = Math.sin(angle) * speed;
     this.turn = 0; // total radians gravity has steered this bullet
     this.size = 4;
     this.born = clock;
@@ -965,10 +1001,10 @@ class Asteroid {
     };
     g.lineJoin = 'round';
 
-    // Dark body with a colored aura
+    // Dark body with a colored aura (kept tight and translucent: the rim and pockets carry the neon)
     poly(P);
-    g.shadowColor = C;
-    g.shadowBlur = 14 * s;
+    g.shadowColor = hexToRgba(C, 0.55);
+    g.shadowBlur = 8 * s;
     g.fillStyle = mixHex(C, SPACE_INK, 0.82);
     g.fill();
     g.shadowBlur = 0;
@@ -1013,7 +1049,7 @@ class Asteroid {
       v.forEach((p, i) => (i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)));
       g.strokeStyle = C;
       g.shadowColor = C;
-      g.shadowBlur = 6 * s;
+      g.shadowBlur = 4 * s;
       g.lineWidth = 1.6 * fine;
       g.stroke();
       g.shadowBlur = 0;
@@ -1358,7 +1394,8 @@ class BlackHole {
       obj.steer(dx, dy, distance, (h * BULLET_SPEED ** 2) / distance, f);
       return;
     }
-    const force = ((BLACK_HOLE_GRAVITY_STRENGTH * zeroG * 100) / distance) * this.opacity * f;
+    const heft = obj === player ? ship.gravity : 1; // some hulls shrug gravity off
+    const force = ((BLACK_HOLE_GRAVITY_STRENGTH * zeroG * heft * 100) / distance) * this.opacity * f;
     obj.velX += (dx / distance) * force;
     obj.velY += (dy / distance) * force;
   }
@@ -2676,10 +2713,12 @@ class Hollowclaw extends Boss {
     const local = () => {
       ctx.save();
       if (this.grow < 1) {
+        // Grows out of its rock, or where the rock was if it got shot apart mid-entrance
         const k = 1 - Math.exp(-6 * this.grow) * Math.cos(8 * this.grow);
-        ctx.translate(s.x, s.y);
+        const o = s ?? this.anchor ?? this;
+        ctx.translate(o.x, o.y);
         ctx.scale(k, k);
-        ctx.translate(-s.x, -s.y);
+        ctx.translate(-o.x, -o.y);
       }
       ctx.translate(this.x, this.y);
       ctx.rotate(this.angle);
@@ -5655,10 +5694,10 @@ function fire() {
   const sin = Math.sin(player.angle);
   const noseX = player.x + (-my * cos - mx * sin) * ROCKET_SCALE;
   const noseY = player.y + (-my * sin + mx * cos) * ROCKET_SCALE;
-  bullets.push(new Bullet(noseX, noseY, player.angle, true));
+  bullets.push(new Bullet(noseX, noseY, player.angle, true, ship.bulletSpeed));
   if (hasPowerUp('spread')) {
-    bullets.push(new Bullet(noseX, noseY, player.angle - SPREAD_ANGLE, false));
-    bullets.push(new Bullet(noseX, noseY, player.angle + SPREAD_ANGLE, false));
+    bullets.push(new Bullet(noseX, noseY, player.angle - SPREAD_ANGLE, false, ship.bulletSpeed));
+    bullets.push(new Bullet(noseX, noseY, player.angle + SPREAD_ANGLE, false, ship.bulletSpeed));
   }
   playSound('shoot', hasPowerUp('lance') ? { rate: 0.7 } : { volume: 0.8 });
   shotsFired++;
@@ -5702,7 +5741,7 @@ function collectPowerUp(p) {
     playSound('power-up', { rate: 1.25 });
     return;
   }
-  player.timers[p.type] = clock + POWER_UP_DURATION[p.type];
+  player.timers[p.type] = clock + POWER_UP_DURATION[p.type] * ship.powerUps;
   player.warned[p.type] = false;
   if (p.type === 'well') {
     player.well = { x: p.x, y: p.y, opacity: 1 }; // anchored where it was grabbed
@@ -5742,6 +5781,7 @@ function supernova(p) {
 }
 
 function updateHighScore() {
+  if (score > (shipBests[rocketHull] ?? 0)) shipBests[rocketHull] = score; // saved at game over (saveShipBests)
   if (score > cachedHighScore) {
     cachedHighScore = score;
     localStorage.setItem(HIGH_SCORE_KEY, score);
@@ -5828,16 +5868,69 @@ function renderLives() {
   livesDisplay.innerHTML = `<svg viewBox="0 0 12 20" aria-hidden="true"><path d="${SHIP_GLYPH}"/></svg>`.repeat(Math.max(0, player.lives));
 }
 
+// Blast off: the preview ship launches, the floor warps away and the title screen peels off in layers (CSS
+// .launching), then the run begins with your ship warping in
+const LAUNCH_TIME = 650;
+const ARRIVAL_TIME = 1200; // ms the ship glides in from below to the center before you take the stick
+let launchAt = 0; // when Blast off was hit (0 = still on the title screen)
+
 function startGame() {
-  if (new URLSearchParams(location.search).has('test')) toggleTestDeck(true);
+  if (launchAt) return;
+  launchAt = performance.now();
+  unlockAudio();
+  playSound('thrust', { rate: 0.75 });
+  startDialog.classList.add('launching');
+  setTimeout(beginRun, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : LAUNCH_TIME);
+}
+
+function beginRun() {
+  if (new URLSearchParams(location.search).has('dev')) toggleTestDeck(true);
   startDialog.style.display = 'none';
   startDialog.inert = true;
-  unlockAudio();
   gameStarted = true;
   resetGame(false); // keep the asteroids already drifting behind the title screen
+  // Arrival: out of hyperspace the ship glides up from below the screen to the center (updateArrival), then
+  // you take over. Spawn invulnerability starts when you do.
+  const arrival = REDUCED_MOTION ? 0 : ARRIVAL_TIME;
+  Object.assign(player, { y: arrival ? H + 60 : H / 2, angle: -Math.PI / 2, arriveUntil: clock + arrival, respawnTime: clock + arrival });
+  if (!arrival) arrive();
+}
+
+function updateArrival() {
+  const t = 1 - (player.arriveUntil - clock) / ARRIVAL_TIME;
+  const e = 1 - (1 - t) ** 3; // fast out of warp, easing to a stop
+  player.y = H + 60 + (H / 2 - H - 60) * e;
+  player.velX = 0;
+  player.velY = 0;
+  player.isThrusting = t < 0.85; // burning to brake, cut just before it settles
+  player.thrustSign = 1;
+  if (clock >= player.arriveUntil) arrive();
+}
+
+// The hand-off: a ring burst in your paint, a soft flash, and the stick is yours
+function arrive() {
+  player.arriveUntil = 0;
+  player.isThrusting = false;
+  player.y = H / 2;
+  flash = 0.25;
+  addShake(3);
+  addParticle({ kind: 'ring', x: player.x, y: player.y, life: 34, size: 120, width: 5, color: rocketColor, drag: 1 });
+  addParticle({ kind: 'ring', x: player.x, y: player.y, life: 22, size: 60, color: '#ffffff', drag: 1 });
+  playSound('power-up', { rate: 0.8, volume: 0.6 });
+}
+
+// Hyperspace: 0..1, how far the stars stretch into streaks. Builds while the rocket lifts off and fades as the
+// ship arrives.
+function warpLevel() {
+  const smooth = x => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+  if (REDUCED_MOTION) return 0;
+  if (launchAt && !gameStarted) return smooth(((performance.now() - launchAt) / LAUNCH_TIME - 0.15) / 0.85);
+  if (player.arriveUntil) return 1 - smooth((1 - (player.arriveUntil - clock) / ARRIVAL_TIME) / 0.75);
+  return 0;
 }
 
 function showGameOver() {
+  saveShipBests();
   gameOverShown = true;
   gameOverShownAt = performance.now();
   newBestDisplay.hidden = !(score > bestAtStart);
@@ -5869,9 +5962,9 @@ function updatePlayer(f) {
   if (joystickEngaged) {
     const target = Math.atan2(touchState.directionY, touchState.directionX);
     const diff = Math.atan2(Math.sin(target - player.angle), Math.cos(target - player.angle));
-    player.rotationSpeed = clamp(diff * 0.2, -ROCKET_ROTATION_SPEED, ROCKET_ROTATION_SPEED);
+    player.rotationSpeed = clamp(diff * 0.2, -ship.turn, ship.turn);
   } else {
-    player.rotationSpeed += (turn * ROCKET_ROTATION_SPEED - player.rotationSpeed) * ease(ROCKET_ROTATION_EASING, f);
+    player.rotationSpeed += (turn * ship.turn - player.rotationSpeed) * ease(ROCKET_ROTATION_EASING, f);
   }
   player.angle += player.rotationSpeed * f;
 
@@ -5892,14 +5985,14 @@ function updatePlayer(f) {
   player.thrustSign = down && !up && !joystickEngaged ? -1 : 1;
 
   if (zeroGravityToggle.checked) {
-    player.velX += thrustX * player.acceleration * f;
-    player.velY += thrustY * player.acceleration * f;
+    player.velX += thrustX * ship.accel * f;
+    player.velY += thrustY * ship.accel * f;
   } else if (thrusting) {
-    const k = ease(0.1, f);
-    player.velX += (thrustX * player.maxSpeed - player.velX) * k;
-    player.velY += (thrustY * player.maxSpeed - player.velY) * k;
+    const k = ease(0.1 * (ship.accel / SHIP_BASE.accel), f); // how quickly thrust reaches top speed
+    player.velX += (thrustX * ship.speed - player.velX) * k;
+    player.velY += (thrustY * ship.speed - player.velY) * k;
   } else {
-    const friction = 0.98 ** f;
+    const friction = ship.drift ** f;
     player.velX *= friction;
     player.velY *= friction;
     if (Math.abs(player.velX) < 0.01) player.velX = 0;
@@ -5907,9 +6000,9 @@ function updatePlayer(f) {
   }
 
   const speed = Math.hypot(player.velX, player.velY);
-  if (speed > player.maxSpeed) {
-    player.velX *= player.maxSpeed / speed;
-    player.velY *= player.maxSpeed / speed;
+  if (speed > ship.speed) {
+    player.velX *= ship.speed / speed;
+    player.velY *= ship.speed / speed;
   }
   player.x += player.velX * f;
   player.y += player.velY * f;
@@ -5921,7 +6014,7 @@ function updatePlayer(f) {
 
   if (thrusting) emitExhaust(f, thrustX, thrustY);
 
-  if ((held('Space') || touchState.shoot) && clock - player.lastShotTime >= player.shootCooldown) fire();
+  if ((held('Space') || touchState.shoot) && clock - player.lastShotTime >= ship.cooldown) fire();
 
   if (player.shootTimer > 0) player.shootTimer -= f;
   player.shootScale = 1 + 0.15 * Math.max(0, player.shootTimer / 10);
@@ -5987,6 +6080,8 @@ function update(f) {
     if (player.lives > 0) {
       if (clock - player.deathTime > RESPAWN_DELAY) respawn();
     } else if (!gameOverShown && clock - player.deathTime > 1200) showGameOver();
+  } else if (player.arriveUntil) {
+    updateArrival();
   } else {
     updatePlayer(f);
   }
@@ -6186,38 +6281,175 @@ function update(f) {
 //
 // Draw
 //
-// `fade` < 1 paints the background translucent, so the last frames linger like phosphor on a vector monitor
-function drawBackground(fade = 1) {
-  const progress =
-    (((clock / BACKGROUND_CYCLE_DURATION) % BACKGROUND_COLORS.length) + BACKGROUND_COLORS.length) %
-    BACKGROUND_COLORS.length;
-  const current = BACKGROUND_COLORS[Math.floor(progress)];
-  const next = BACKGROUND_COLORS[(Math.floor(progress) + 1) % BACKGROUND_COLORS.length];
-  const t = progress % 1;
-  const mix = (a, b) => `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(',')})`;
-
-  const gradient = ctx.createLinearGradient(0, 0, 0, H);
-  gradient.addColorStop(0, mix(current.top, next.top));
-  gradient.addColorStop(1, mix(current.bottom, next.bottom));
-  ctx.fillStyle = gradient;
-  ctx.globalAlpha = fade;
-  ctx.fillRect(-30, -30, W + 60, H + 60); // oversized so screen shake never reveals an edge
-  ctx.globalAlpha = 1;
+// Small seeded random, so every palette's nebula shares one cloud layout and only the colors change
+function seeded(seed) {
+  return () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-function drawStars() {
-  const offsetX = player.x - W / 2;
-  const offsetY = player.y - H / 2;
-  for (const star of stars) {
-    const parallax = star.depth * 0.2;
-    const x = (((star.x - offsetX * parallax) % W) + W) % W;
-    const y = (((star.y - offsetY * parallax) % H) + H) % H;
-    const alpha = star.twinkle ? star.brightness * (0.6 + 0.4 * Math.sin(clock * star.twinkleSpeed)) : star.brightness;
-    ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-    ctx.beginPath();
-    ctx.arc(x, y, star.size, 0, TAU);
-    ctx.fill();
+// One palette's backdrop, baked once at NEBULA_RES with margin for the drift: base gradient, clouds with
+// cyan-lit edges, a dusting of faint stars, and the title screen's violet horizon glow along the bottom. A
+// blur pass melts the gradients' 8-bit dither, which the upscale would otherwise blow up into a faint lattice.
+const NEBULA_MARGIN = 80; // matches #deepField's inset
+let nebulae = [];
+function nebulaSprite(index) {
+  if (nebulae[index]) return nebulae[index];
+  const { a, b, rim } = NEBULA_PALETTES[index];
+  const margin = NEBULA_MARGIN;
+  const c = document.createElement('canvas');
+  c.width = Math.ceil((W + margin * 2) * NEBULA_RES);
+  c.height = Math.ceil((H + margin * 2) * NEBULA_RES);
+  const g = c.getContext('2d');
+  g.scale(NEBULA_RES, NEBULA_RES);
+  const w = W + margin * 2;
+  const h = H + margin * 2;
+  const base = g.createLinearGradient(0, 0, 0, h);
+  base.addColorStop(0, 'rgb(5, 2, 14)');
+  base.addColorStop(1, 'rgb(20, 6, 42)');
+  g.fillStyle = base;
+  g.fillRect(0, 0, w, h);
+
+  const r = seeded(1977);
+  g.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 9; i++) {
+    const x = r() * w;
+    const y = r() * h;
+    const rad = (0.18 + r() * 0.3) * Math.max(w, h);
+    const color = r() < 0.55 ? a : b;
+    const cloud = g.createRadialGradient(x, y, 0, x, y, rad);
+    cloud.addColorStop(0, hexToRgba(color, NEBULA_ALPHA * (0.5 + r() * 0.5)));
+    cloud.addColorStop(0.55, hexToRgba(color, NEBULA_ALPHA * 0.25));
+    cloud.addColorStop(1, hexToRgba(color, 0));
+    g.fillStyle = cloud;
+    g.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+    if (i % 3 === 0) {
+      // A lit edge: a thin offset crescent of cyan on some clouds
+      const angle = r() * TAU;
+      const ex = x + Math.cos(angle) * rad * 0.45;
+      const ey = y + Math.sin(angle) * rad * 0.45;
+      const edge = g.createRadialGradient(ex, ey, rad * 0.05, ex, ey, rad * 0.4);
+      edge.addColorStop(0, hexToRgba(rim, 0.07));
+      edge.addColorStop(1, hexToRgba(rim, 0));
+      g.fillStyle = edge;
+      g.fillRect(ex - rad * 0.4, ey - rad * 0.4, rad * 0.8, rad * 0.8);
+    }
   }
+  // The title screen's horizon, as a whisper along the bottom
+  const horizon = g.createLinearGradient(0, h - margin - H * 0.22, 0, h);
+  horizon.addColorStop(0, 'rgba(255, 77, 255, 0)');
+  horizon.addColorStop(1, 'rgba(255, 77, 255, 0.08)');
+  g.fillStyle = horizon;
+  g.fillRect(0, 0, w, h);
+
+  const soft = document.createElement('canvas');
+  soft.width = c.width;
+  soft.height = c.height;
+  const sg = soft.getContext('2d');
+  sg.filter = 'blur(3px)';
+  sg.drawImage(c, 0, 0);
+  sg.filter = 'none';
+  // Star dust caught in the clouds (after the blur, so it stays crisp)
+  sg.scale(NEBULA_RES, NEBULA_RES);
+  for (let i = 0; i < 260; i++) {
+    sg.fillStyle = `rgba(200, 220, 255, ${0.03 + r() * 0.06})`;
+    sg.fillRect(r() * w, r() * h, 2, 2);
+  }
+  nebulae[index] = soft;
+  return soft;
+}
+
+// The nebula lives in two page layers behind the (transparent) game canvas, not in the canvas itself: the
+// compositor drifts it (CSS animation) and crossfades palettes (CSS transition) on the GPU, off the main
+// thread, and the canvas never repaints a full-screen backdrop. The palette follows the wave: the title
+// screen and wave 1 use the first, then one step per wave.
+const deepField = $('deepField');
+const nebulaLayers = [...deepField.children];
+let nebulaShown = -1; // palette in the front layer
+let nebulaFront = 0;
+
+const paletteFor = () => Math.max(0, wave - 1) % NEBULA_PALETTES.length;
+
+function showNebula(index, instant = false) {
+  const sprite = nebulaSprite(index);
+  nebulaFront = 1 - nebulaFront;
+  const front = nebulaLayers[nebulaFront];
+  const back = nebulaLayers[1 - nebulaFront];
+  front.width = sprite.width;
+  front.height = sprite.height;
+  front.getContext('2d').drawImage(sprite, 0, 0);
+  // The new palette fades in on top of the old one (no dip in brightness), then becomes the base
+  front.style.transition = 'none';
+  front.style.opacity = '0';
+  front.style.zIndex = '1';
+  back.style.zIndex = '0';
+  void front.offsetWidth;
+  front.style.transition = instant ? 'none' : `opacity ${NEBULA_FADE}ms ease-in-out`;
+  front.style.opacity = '1';
+  nebulaShown = index;
+}
+
+function syncNebula() {
+  if (paletteFor() !== nebulaShown) showNebula(paletteFor(), nebulaShown < 0);
+}
+
+// `fade` < 1 erases the last frame only partway, so it lingers like phosphor on a vector monitor
+function drawBackground(fade = 1) {
+  syncNebula();
+  if (fade >= 1) {
+    ctx.clearRect(-30, -30, W + 60, H + 60); // oversized so screen shake never leaves an edge
+    return;
+  }
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.globalAlpha = fade;
+  ctx.fillRect(-30, -30, W + 60, H + 60);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+// Three layers of stars: each drifts and leans against the ship by its own amount, so the field has depth
+let warpScroll = 0; // px the stars have streamed during hyperspace
+let warpLast = 0;
+
+function drawStars() {
+  // While arriving, the ship's offset would yank the field around: hold the parallax at center
+  const offsetX = player.arriveUntil ? 0 : player.x - W / 2;
+  const offsetY = player.arriveUntil ? 0 : player.y - H / 2;
+  const seconds = REDUCED_MOTION ? 0 : clock / 1000;
+  const now = performance.now();
+  const warp = warpLevel();
+  warpScroll += warp * Math.min(50, now - warpLast) * 1.6;
+  warpLast = now;
+  let fill = '';
+  for (const star of stars) {
+    const layer = STAR_LAYERS[star.layer];
+    const x = (((star.x - offsetX * layer.parallax - seconds * layer.drift * 0.6) % W) + W) % W;
+    const y = (((star.y - offsetY * layer.parallax + seconds * layer.drift + warpScroll * (0.35 + star.layer * 0.45)) % H) + H) % H;
+    if (warp > 0.02) {
+      // Hyperspace streak, longer for nearer layers
+      ctx.globalAlpha = star.brightness;
+      ctx.strokeStyle = star.color;
+      ctx.lineWidth = Math.max(0.8, star.size);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x, y - warp * (14 + star.layer * 34));
+      ctx.stroke();
+      continue;
+    }
+    ctx.globalAlpha = star.twinkle ? star.brightness * (0.55 + 0.45 * Math.sin(clock * star.twinkleSpeed + star.x)) : star.brightness;
+    if (fill !== star.color) ctx.fillStyle = fill = star.color;
+    if (star.size < 1) {
+      ctx.fillRect(x, y, star.size * 1.6, star.size * 1.6);
+    } else {
+      ctx.beginPath();
+      ctx.arc(x, y, star.size, 0, TAU);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
 }
 
 // Pulp rocket, rim-lit in neon. Shading is axial (bright spine, darker flanks) so it reads the same at
@@ -7084,34 +7316,113 @@ function paintDreadnought(g, s, color) {
   );
 }
 
-// Muzzles are where shots leave, in the same local units; with two, shots alternate between them (one bullet
-// per shot either way, so every hull plays the same)
-const SHIPS = {
-  classic: { label: 'Classic', paint: paintClassic, muzzles: [[0, -18.5]] },
-  kestrel: { label: 'Kestrel', paint: paintKestrel, muzzles: [[0, -18.5]] },
-  pathfinder: { label: 'Pathfinder', paint: paintPathfinder, muzzles: [[0, -18.5]] },
-  swift: { label: 'Swift', paint: paintSwift, muzzles: [[0, -18.5]] },
-  reaver: { label: 'Reaver', paint: paintReaver, muzzles: [[-4.9, -11.6], [4.9, -11.6]] },
-  dreadnought: { label: 'Dreadnought', paint: paintDreadnought, muzzles: [[0, -18.5]] }
+// Each hull trades one strength for one weakness against Classic (SHIP_BASE), within about ±25%, so the pick
+// is a play style, never a power ladder. Muzzles are where shots leave, in hull units; with two, shots
+// alternate between them (one bullet per shot either way).
+const SHIP_BASE = {
+  speed: 4, // top speed, px/frame
+  accel: 0.2, // thrust per frame
+  drift: 0.98, // velocity kept per frame when coasting (higher = slides longer)
+  turn: 0.08, // rad/frame
+  cooldown: 200, // ms between shots
+  bulletSpeed: 15, // faster flies straighter: black holes bend it less
+  gravity: 1, // black hole pull on the hull
+  powerUps: 1 // power-up duration multiplier
 };
+const SHIPS = {
+  classic: {
+    label: 'Classic',
+    kind: 'All-rounder',
+    paint: paintClassic,
+    muzzles: [[0, -18.5]],
+    stats: {},
+    pros: ['Balanced: no trade-offs'],
+    cons: []
+  },
+  kestrel: {
+    label: 'Kestrel',
+    kind: 'Racer',
+    paint: paintKestrel,
+    muzzles: [[0, -18.5]],
+    stats: { speed: 4.8, drift: 0.99 },
+    pros: ['Top speed +20%'],
+    cons: ['Drifts: slow to stop']
+  },
+  swift: {
+    label: 'Swift',
+    kind: 'Sport flyer',
+    paint: paintSwift,
+    muzzles: [[0, -18.5]],
+    stats: { turn: 0.1, drift: 0.96, speed: 3.6 },
+    pros: ['Turns 25% faster, stops on a dime'],
+    cons: ['Top speed −10%']
+  },
+  pathfinder: {
+    label: 'Pathfinder',
+    kind: 'Explorer',
+    paint: paintPathfinder,
+    muzzles: [[0, -18.5]],
+    stats: { powerUps: 1.3, cooldown: 230 },
+    pros: ['Power-ups last 30% longer'],
+    cons: ['Fires 15% slower']
+  },
+  reaver: {
+    label: 'Reaver',
+    kind: 'Strike fighter',
+    paint: paintReaver,
+    muzzles: [[-4.9, -11.6], [4.9, -11.6]],
+    stats: { cooldown: 160, turn: 0.064 },
+    pros: ['Fires 25% faster (twin cannons)'],
+    cons: ['Turns 20% slower']
+  },
+  dreadnought: {
+    label: 'Dreadnought',
+    kind: 'Siege tower',
+    paint: paintDreadnought,
+    muzzles: [[0, -18.5]],
+    stats: { bulletSpeed: 17.5, cooldown: 220, gravity: 0.35, speed: 3.4, accel: 0.17 },
+    pros: ['Railgun: shots fly 17% faster', 'Black holes barely pull it'],
+    cons: ['Slow: speed and thrust −15%', 'Railgun fires 10% slower, bends less']
+  }
+};
+let ship = SHIP_BASE; // the flown hull's stats
+
+function selectHull(key) {
+  rocketHull = key;
+  ship = { ...SHIP_BASE, ...SHIPS[key].stats };
+  rocketSprite = null;
+}
+
+// Stat pips (1–5, Classic = 3) for the hangar, computed from the real numbers so they can't drift from them
+function shipPips(stats) {
+  const pips = v => clamp(Math.round(3 + v), 1, 5);
+  return {
+    Speed: pips((stats.speed / SHIP_BASE.speed - 1) * 10 + (stats.accel / SHIP_BASE.accel - 1) * 2),
+    Handling: pips((stats.turn / SHIP_BASE.turn - 1) * 8 - (stats.drift - SHIP_BASE.drift) * 100),
+    Firepower: pips((SHIP_BASE.cooldown / stats.cooldown - 1) * 8 + (stats.bulletSpeed / SHIP_BASE.bulletSpeed - 1) * 4)
+  };
+}
+
+const SHIP_GLOW = 0.3; // in-game halo strength (the hull paints scale only their shadowBlur by this)
 
 function getRocketSprite() {
-  rocketSprite ??= makeSprite(ROCKET_SPRITE_SIZE, ROCKET_SCALE * 1.25, (g, s) => SHIPS[rocketHull].paint(g, s, rocketColor));
+  rocketSprite ??= makeSprite(ROCKET_SPRITE_SIZE, ROCKET_SCALE * 1.25, (g, s) => SHIPS[rocketHull].paint(g, s * SHIP_GLOW, rocketColor));
   return rocketSprite;
 }
 
 // Draws a hull into a page canvas, crisp at the device's pixel ratio: the hangar preview (with a flame) and
 // the picker thumbnails
-function paintHullCanvas(canvas, hull, color, flame = false) {
-  const w = canvas.clientWidth;
-  const h = canvas.clientHeight;
+// glow scales the hull's neon halo (the page's previews run it softer than the game does)
+// stage: the hangar's tall frame (ship in the upper part, room for the flame below); hull: null draws only the
+// flame (the wheel lights its center ship's engine on a separate layer)
+function paintHullCanvas(canvas, hull, color, { stage = false, flame = false, w = canvas.clientWidth, h = canvas.clientHeight, glow = 1 } = {}) {
   if (!w) return; // not on screen
   const r = window.devicePixelRatio || 1;
   canvas.width = Math.round(w * r);
   canvas.height = Math.round(h * r);
   const g = canvas.getContext('2d');
-  const k = (flame ? w / 32 : Math.min(w, h) / 40) * r; // px per hull unit: hulls run -18.5..13.6, up to ~26 wide
-  g.setTransform(k, 0, 0, k, canvas.width / 2, flame ? canvas.height * 0.4 : canvas.height / 2 + 2.5 * k);
+  const k = (stage ? w / 38 : Math.min(w, h) / 40) * r; // px per hull unit: hulls run -18.5..13.6, up to ~26 wide, plus glow
+  g.setTransform(k, 0, 0, k, canvas.width / 2, stage ? canvas.height * 0.4 : canvas.height / 2 + 2.5 * k);
   if (flame) {
     for (const [hw, len, c] of [[5.5, 34, '#ff4dff'], [3.8, 26, '#ffbf00'], [2.2, 19, CREAM]]) {
       g.beginPath();
@@ -7121,14 +7432,92 @@ function paintHullCanvas(canvas, hull, color, flame = false) {
       g.fill();
     }
   }
-  SHIPS[hull].paint(g, k, color);
+  if (hull) SHIPS[hull].paint(g, k * glow, color); // the paints scale only their shadowBlur halo by this
 }
 
-function renderHangar() {
-  paintHullCanvas(hangarPreview, rocketHull, rocketColor, true);
-  hullSelector.querySelectorAll('canvas').forEach(c => paintHullCanvas(c, c.dataset.hull, rocketColor));
-  hullName.textContent = SHIPS[rocketHull].label;
+// New paint: it rolls up the preview from the engine to the nose behind a bright edge (only on the hull, never
+// the empty canvas). Starts from whatever is on screen, so rapid clicks chain smoothly.
+let paintWipe = 0;
+function wipePaint(canvas, hull) {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  if (reduce || !w) return paintHullCanvas(canvas, hull, rocketColor, STAGE_LOOK);
+  const before = document.createElement('canvas');
+  before.width = canvas.width;
+  before.height = canvas.height;
+  before.getContext('2d').drawImage(canvas, 0, 0);
+  const after = document.createElement('canvas');
+  paintHullCanvas(after, hull, rocketColor, { ...STAGE_LOOK, w, h });
+  const id = ++paintWipe;
+  const start = performance.now();
+  const g = canvas.getContext('2d');
+  const step = now => {
+    if (id !== paintWipe) return; // a newer wipe took over
+    const t = Math.min(1, (now - start) / 450);
+    const cut = after.height * (1 - (1 - (1 - t) ** 3)); // ease-out, bottom to top
+    const r = after.height / h; // device px per CSS px
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, after.width, after.height);
+    g.drawImage(before, 0, 0, after.width, after.height, 0, 0, after.width, after.height);
+    g.clearRect(0, cut, after.width, after.height - cut);
+    g.drawImage(after, 0, cut, after.width, after.height - cut, 0, cut, after.width, after.height - cut);
+    if (t < 1) {
+      g.globalCompositeOperation = 'source-atop'; // the edge only lights the hull
+      g.fillStyle = `rgba(255, 241, 220, ${0.35 * (1 - t)})`;
+      g.fillRect(0, cut - 6 * r, after.width, 12 * r);
+      g.fillStyle = `rgba(255, 255, 255, ${0.9 * (1 - t)})`;
+      g.fillRect(0, cut - 1.5 * r, after.width, 3 * r);
+      g.globalCompositeOperation = 'source-over';
+      requestAnimationFrame(step);
+    }
+  };
+  requestAnimationFrame(step);
 }
+
+// The ship card: every hull's title and details are built once and stacked (see .ship-stack), and the pips
+// are one shared set that fills and drains in place, so switching ships never reflows the screen
+function buildShipCard() {
+  const bests = shipBests;
+  for (const [key, s] of Object.entries(SHIPS)) {
+    shipTitles.insertAdjacentHTML('beforeend', `<div class="ship-title" data-hull="${key}">${s.label}<span class="ship-kind">${s.kind}</span></div>`);
+    const perks = [...s.pros.map(t => `<li class="pro">${t}</li>`), ...s.cons.map(t => `<li class="con">${t}</li>`)].join('');
+    const best = bests[key] ? `Best in this ship: ${bests[key].toLocaleString()}` : 'No runs in this ship yet';
+    shipDetails.insertAdjacentHTML('beforeend', `<div data-hull="${key}"><ul class="ship-perks">${perks}</ul><div class="ship-best">${best}</div></div>`);
+  }
+  shipStats.innerHTML = Object.keys(shipPips(SHIP_BASE))
+    .map(name => `<span>${name}</span><span class="ship-pips" data-stat="${name}">${[0, 1, 2, 3, 4].map(i => `<i style="--i: ${i}"></i>`).join('')}</span>`)
+    .join('');
+}
+
+const STAGE_LOOK = { stage: true, glow: 0.65 };
+
+// The ship card follows the wheel's centered ship
+function renderHangar() {
+  const pick = SHIPS[rocketHull];
+  for (const el of [...shipTitles.children, ...shipDetails.children]) el.classList.toggle('is-active', el.dataset.hull === rocketHull);
+  const pips = shipPips(ship);
+  for (const bar of shipStats.querySelectorAll('.ship-pips')) {
+    const n = pips[bar.dataset.stat];
+    bar.setAttribute('role', 'img');
+    bar.setAttribute('aria-label', `${bar.dataset.stat} ${n} of 5`);
+    [...bar.children].forEach((pip, i) => pip.classList.toggle('on', i < n));
+  }
+  shipAnnounce.textContent = `${pick.label}, ${pick.kind}. ${[...pick.pros, ...pick.cons].join('. ')}.`;
+}
+
+// Each hull keeps its own best (the overall best still lives in HIGH_SCORE_KEY). Held in memory during a run
+// and written once at game over, not on every point.
+function bestByShip() {
+  try {
+    return JSON.parse(localStorage.getItem('bestByShip')) ?? {};
+  } catch {
+    return {};
+  }
+}
+const shipBests = bestByShip();
+const saveShipBests = () => localStorage.setItem('bestByShip', JSON.stringify(shipBests));
+window.addEventListener('pagehide', saveShipBests);
 
 
 function drawWell() {
@@ -7194,7 +7583,7 @@ function drawTimerGauges() {
   ctx.save();
   ctx.lineCap = 'round';
   active.forEach((type, i) => {
-    const total = POWER_UP_DURATION[type];
+    const total = POWER_UP_DURATION[type] * ship.powerUps;
     const left = player.timers[type] - clock;
     const fraction = clamp(left / total, 0, 1);
     const age = Math.min(1, (total - left) / 400);
@@ -7261,7 +7650,7 @@ function drawPlayer() {
     ctx.restore();
   }
 
-  const invulnerable = clock - player.respawnTime < SPAWN_INVULNERABILITY;
+  const invulnerable = clock >= player.respawnTime && clock - player.respawnTime < SPAWN_INVULNERABILITY; // blinks once you have control
   const half = ROCKET_SPRITE_SIZE / 2;
 
   ctx.save();
@@ -7357,7 +7746,95 @@ function draw(realDelta) {
   updateHud();
 }
 
+// Title screen floor: a neon grid in true perspective. Every row is drawn at least a pixel wide and fades as
+// rows bunch up toward the horizon, so far rows dim instead of shimmering (a CSS-tilted grid squeezes them
+// below a pixel, where they pop in and out). Runs only while the title screen is up.
+const FLOOR_ROW_TIME = 1600; // ms for the grid to roll one row toward you
+const FLOOR_COLUMNS = 26; // converging lines across the screen's width at the bottom edge
+const FLOOR_SPREAD = 2.2; // how far past the screen's sides the outer columns reach at the bottom
+const FLOOR_ROWS = 40;
+const startFloor = $('startFloor');
+
+let floorPhase = 0;
+let floorLast = 0;
+
+function drawStartFloor(now) {
+  if (gameStarted) return;
+  requestAnimationFrame(drawStartFloor);
+  const r = window.devicePixelRatio || 1;
+  const w = Math.round(startFloor.clientWidth * r);
+  const h = Math.round(startFloor.clientHeight * r);
+  if (!w || !h) return;
+  if (startFloor.width !== w || startFloor.height !== h) {
+    startFloor.width = w;
+    startFloor.height = h;
+  }
+  const g = startFloor.getContext('2d');
+  g.clearRect(0, 0, w, h);
+
+  // Ground haze and the horizon glow
+  const haze = g.createLinearGradient(0, 0, 0, h);
+  haze.addColorStop(0, 'rgba(120, 20, 160, 0)');
+  haze.addColorStop(1, 'rgba(120, 20, 160, 0.45)');
+  g.fillStyle = haze;
+  g.fillRect(0, 0, w, h);
+  const glow = g.createRadialGradient(w / 2, 0, 0, w / 2, 0, w * 0.45);
+  glow.addColorStop(0, 'rgba(255, 120, 220, 0.3)');
+  glow.addColorStop(1, 'rgba(255, 120, 220, 0)');
+  g.fillStyle = glow;
+  g.fillRect(0, 0, w, h);
+
+  const line = Math.max(1, 1.5 * r);
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Rolls toward you; on Blast off it surges to warp speed while it fades (the fade is CSS)
+  const dt = floorLast ? Math.min(100, now - floorLast) : 0;
+  floorLast = now;
+  const warp = launchAt ? 1 + ((now - launchAt) / LAUNCH_TIME) ** 2 * 14 : 1;
+  floorPhase = still ? 0 : (floorPhase + (dt / FLOOR_ROW_TIME) * warp) % 1;
+  const phase = floorPhase;
+
+  // Rows: a row at depth z sits at y = h / z (z = 1 is the bottom edge). Alpha follows how far it is from the
+  // next row, so the crowded far rows fade out smoothly
+  g.fillStyle = 'rgb(255, 77, 255)';
+  for (let i = 0; i < FLOOR_ROWS; i++) {
+    const z = 1 + i - phase;
+    if (z <= 0.6) continue;
+    const y = h / z;
+    const gap = h / z - h / (z + 1);
+    g.globalAlpha = clamp((gap - 2 * line) / (14 * r), 0, 1) * 0.85;
+    if (g.globalAlpha <= 0) continue;
+    g.fillRect(0, y - line / 2, w, line);
+  }
+
+  // Columns converge on the vanishing point, fading out toward the horizon where they crowd together
+  const fade = g.createLinearGradient(0, 0, 0, h);
+  fade.addColorStop(0, 'rgba(255, 77, 255, 0)');
+  fade.addColorStop(0.35, 'rgba(255, 77, 255, 0.35)');
+  fade.addColorStop(1, 'rgba(255, 77, 255, 0.85)');
+  g.globalAlpha = 1;
+  g.strokeStyle = fade;
+  g.lineWidth = line;
+  g.beginPath();
+  for (let j = -FLOOR_COLUMNS; j <= FLOOR_COLUMNS; j++) {
+    const bottomX = w / 2 + (j / FLOOR_COLUMNS) * w * FLOOR_SPREAD;
+    g.moveTo(w / 2, 0);
+    g.lineTo(bottomX, h);
+  }
+  g.stroke();
+
+  // Melt into the sky: the far edge fades out (and takes the most crowded rows with it)
+  g.globalCompositeOperation = 'destination-in';
+  const sky = g.createLinearGradient(0, 0, 0, h);
+  sky.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  sky.addColorStop(0.45, 'rgba(0, 0, 0, 1)');
+  g.fillStyle = sky;
+  g.fillRect(0, 0, w, h);
+  g.globalCompositeOperation = 'source-over';
+}
+requestAnimationFrame(drawStartFloor);
+
 function gameLoop(timestamp) {
+  requestAnimationFrame(gameLoop); // first: an error in one frame logs, but never freezes the game
   const realDelta = Math.min(timestamp - lastTime, 100); // cap so a long stall doesn't teleport things
   lastTime = timestamp;
 
@@ -7374,8 +7851,6 @@ function gameLoop(timestamp) {
     shake *= 0.86 ** (realDelta / TARGET_DELTA);
     draw(realDelta);
   }
-
-  requestAnimationFrame(gameLoop);
 }
 
 //
@@ -7401,34 +7876,187 @@ document.querySelectorAll('input[name="rocketColor"]').forEach(input => {
     rocketColor = ROCKET_COLORS[input.value];
     rocketSprite = null;
     localStorage.setItem('rocketColor', input.value);
-    renderHangar();
+    // The centered ship gets the paint wipe; the rest of the drum repaints at once
+    for (const item of wheel.items) {
+      const key = hullKeys[item.dataset.index];
+      if (key === rocketHull) wipePaint(item.lastChild, key);
+      else paintHullCanvas(item.lastChild, key, rocketColor, STAGE_LOOK);
+    }
   });
 });
 
-// Ship picker: one thumbnail per hull, in your paint
-rocketHull = SHIPS[localStorage.getItem('rocketHull')] ? localStorage.getItem('rocketHull') : 'classic';
-for (const [key, ship] of Object.entries(SHIPS)) {
-  const option = document.createElement('label');
-  option.className = 'hull-option';
-  option.title = ship.label;
-  option.innerHTML = `<input type="radio" name="rocketHull" value="${key}" aria-label="${ship.label}" /><canvas data-hull="${key}"></canvas>`;
-  const input = option.querySelector('input');
-  input.checked = key === rocketHull;
-  input.addEventListener('change', () => {
-    rocketHull = key;
-    rocketSprite = null;
-    localStorage.setItem('rocketHull', key);
-    renderHangar();
+buildShipCard();
+
+// Ship wheel: the hulls on an endless drum. The centered ship is the pick (full size, engine lit); its
+// neighbors shrink, fade and tilt away. Spin it by scroll, drag/flick, clicking a neighbor or the arrow keys
+// (a hidden radio group carries keyboard and screen reader use). Each detent clicks and updates the card.
+const WHEEL_SLOT = 0.62; // ship spacing as a share of the stage height
+const WHEEL_TILT = 34; // degrees a neighbor leans back per slot
+const hullKeys = Object.keys(SHIPS);
+const wheel = { pos: 0, target: 0, vel: 0, drag: null, acc: 0, running: false, items: [] };
+
+function buildShipWheel() {
+  const box = $('shipWheel');
+  for (const [i, key] of hullKeys.entries()) {
+    const item = document.createElement('div');
+    item.className = 'wheel-ship';
+    item.dataset.index = i;
+    item.innerHTML = '<canvas class="wheel-flame"></canvas><canvas class="wheel-hull"></canvas>';
+    $('wheelDrum').append(item);
+    wheel.items.push(item);
+    const option = document.createElement('label');
+    option.innerHTML = `<input type="radio" name="rocketHull" value="${key}" />${SHIPS[key].label}, ${SHIPS[key].kind}`;
+    option.querySelector('input').addEventListener('change', () => spinTo(i));
+    $('wheelOptions').append(option);
+  }
+  box.addEventListener('wheel', e => {
+    e.preventDefault();
+    unlockAudio();
+    // A mouse notch is one ship; a trackpad's stream of small deltas glides through several
+    const delta = (Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX) * (e.deltaMode === 1 ? 16 : 1);
+    wheel.acc += delta;
+    if (Math.abs(wheel.acc) >= 50) {
+      wheel.target = Math.round(wheel.target) + Math.sign(wheel.acc);
+      wheel.acc = 0;
+    }
+    runWheel();
+  }, { passive: false });
+  // ▲▼ step one ship, ◀▶ one paint, looping (they're for pointers; the keyboard has its own keys)
+  for (const button of document.querySelectorAll('.step-button')) {
+    button.addEventListener('mousedown', e => e.preventDefault()); // never steal focus
+    button.addEventListener('click', () => (button.dataset.step ? spinBy(+button.dataset.step) : stepPaint(+button.dataset.paint)));
+  }
+  box.addEventListener('pointerdown', e => {
+    if (e.target.closest('.wheel-step')) return; // a button press, not a drag
+    unlockAudio();
+    box.setPointerCapture(e.pointerId);
+    wheel.drag = { y: e.clientY, pos: wheel.pos, moved: 0, last: e.clientY, at: performance.now(), v: 0, item: e.target.closest('.wheel-ship') };
+    runWheel();
   });
-  hullSelector.append(option);
+  box.addEventListener('pointermove', e => {
+    const d = wheel.drag;
+    if (!d) return;
+    const now = performance.now();
+    d.moved = Math.max(d.moved, Math.abs(e.clientY - d.y));
+    d.v = (e.clientY - d.last) / Math.max(1, now - d.at); // px/ms
+    d.last = e.clientY;
+    d.at = now;
+    wheel.target = wheel.pos = d.pos - (e.clientY - d.y) / slotPx();
+  });
+  const release = () => {
+    const d = wheel.drag;
+    if (!d) return;
+    wheel.drag = null;
+    if (d.moved < 5) {
+      // A tap: spin a neighbor to the center
+      if (d.item) wheel.target = Math.round(wheel.pos) + wrapSlot(+d.item.dataset.index - wheel.pos);
+    } else {
+      wheel.target = Math.round(wheel.pos - (d.v * 140) / slotPx()); // flick: momentum, then snap to a ship
+    }
+    runWheel();
+  };
+  box.addEventListener('pointerup', release);
+  box.addEventListener('pointercancel', release);
 }
-window.addEventListener('resize', renderHangar);
+
+// The wheel is 1.5 stages tall (see .ship-wheel); measure it, not a ship (far ships can be hidden)
+const slotPx = () => ($('shipWheel').clientHeight / 1.5) * WHEEL_SLOT;
+const wrapSlot = d => ((((d + hullKeys.length / 2) % hullKeys.length) + hullKeys.length) % hullKeys.length) - hullKeys.length / 2;
+const centeredIndex = () => ((Math.round(wheel.pos) % hullKeys.length) + hullKeys.length) % hullKeys.length;
+
+function spinBy(step) {
+  unlockAudio();
+  wheel.target = Math.round(wheel.target) + step;
+  runWheel();
+}
+
+// Next or previous paint swatch (wrapping), as if it were clicked
+function stepPaint(step) {
+  const inputs = [...document.querySelectorAll('input[name="rocketColor"]')];
+  const hadFocus = inputs.includes(document.activeElement);
+  const next = inputs[(inputs.findIndex(i => i.checked) + step + inputs.length) % inputs.length];
+  next.checked = true;
+  next.dispatchEvent(new Event('change'));
+  if (hadFocus) next.focus();
+}
+
+// Turn the shortest way round to ship i
+function spinTo(i) {
+  wheel.target = Math.round(wheel.target) + Math.round(wrapSlot(i - wheel.target));
+  runWheel();
+}
+window.spinToHull = key => spinTo(hullKeys.indexOf(key)); // for tests and the console
+
+function paintWheel() {
+  for (const item of wheel.items) {
+    const key = hullKeys[item.dataset.index];
+    paintHullCanvas(item.lastChild, key, rocketColor, STAGE_LOOK);
+    paintHullCanvas(item.firstChild, null, rocketColor, { ...STAGE_LOOK, flame: true });
+  }
+  layoutWheel();
+}
+
+function layoutWheel() {
+  const slot = slotPx();
+  for (const item of wheel.items) {
+    const d = wrapSlot(+item.dataset.index - wheel.pos);
+    const a = Math.abs(d);
+    item.style.visibility = a > 2.3 ? 'hidden' : '';
+    item.style.transform = `translateY(${d * slot}px) rotateX(${-d * WHEEL_TILT}deg) scale(${1 - Math.min(a, 2) * 0.24})`;
+    item.style.opacity = clamp(1 - a * 0.38, 0, 1);
+    item.style.zIndex = 10 - Math.round(a * 2);
+    item.firstChild.style.opacity = clamp(1 - a * 2.5, 0, 1); // the engine burns only at the center
+    item.classList.toggle('is-center', a < 0.5);
+  }
+  // Each detent: a click, and the card follows
+  const index = centeredIndex();
+  if (hullKeys[index] !== rocketHull) {
+    selectHull(hullKeys[index]);
+    localStorage.setItem('rocketHull', rocketHull);
+    const option = $('wheelOptions').querySelectorAll('input')[index];
+    const hadFocus = $('wheelOptions').contains(document.activeElement);
+    option.checked = true;
+    if (hadFocus) option.focus(); // keyboard focus follows the pick, so screen readers announce it
+    renderHangar();
+    playSound('click', { rate: 1.7, volume: 0.35 });
+  }
+}
+
+// Spring the drum toward its target (a touch of overshoot, like a real detent), then rest
+function runWheel() {
+  if (wheel.running) return;
+  wheel.running = true;
+  let last = performance.now();
+  const step = now => {
+    const f = Math.min(3, (now - last) / TARGET_DELTA);
+    last = now;
+    if (!wheel.drag) {
+      wheel.vel = (wheel.vel + (wheel.target - wheel.pos) * 0.16 * f) * 0.7 ** f;
+      wheel.pos += wheel.vel * f;
+      if (Math.abs(wheel.target - wheel.pos) < 0.001 && Math.abs(wheel.vel) < 0.001) {
+        wheel.pos = wheel.target;
+        wheel.running = false;
+      }
+    }
+    layoutWheel();
+    if (wheel.running) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+const savedHull = SHIPS[localStorage.getItem('rocketHull')] ? localStorage.getItem('rocketHull') : 'classic';
+selectHull(savedHull);
+buildShipWheel();
+wheel.pos = wheel.target = hullKeys.indexOf(savedHull);
+$('wheelOptions').querySelectorAll('input')[wheel.pos].checked = true;
+window.addEventListener('resize', paintWheel);
 
 window.addEventListener('pointerdown', unlockAudio, { once: true });
 
 const savedColor = ROCKET_COLORS[localStorage.getItem('rocketColor')] ? localStorage.getItem('rocketColor') : 'blue';
 rocketColor = ROCKET_COLORS[savedColor];
 document.querySelectorAll('input[name="rocketColor"]').forEach(input => (input.checked = input.value === savedColor));
+paintWheel();
 renderHangar();
 zeroGravityToggle.checked = localStorage.getItem('zeroGravity') === 'true';
 soundToggle.classList.toggle('muted', !isSoundEnabled);

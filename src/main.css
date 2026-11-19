@@ -1,3 +1,11 @@
+/* Registered so it can animate: switching paint blends every --hull color (pips, rings, class name) instead
+   of snapping */
+@property --hull {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #02b7ff;
+}
+
 body,
 html {
   height: 100%;
@@ -24,8 +32,50 @@ body {
   height: 100dvh;
   margin: 0;
   overscroll-behavior: none;
-  background: black;
+  background: transparent; /* the deep field shows through */
   touch-action: none; /* Disables default touch actions like scrolling */
+}
+
+/* Deep field: the nebula behind the game canvas. Its slow drift runs on the compositor (no repaint), and
+   palettes crossfade by opacity (set from main.js). */
+#deepField {
+  z-index: -1;
+  position: fixed;
+  inset: -80px;
+  pointer-events: none;
+  animation: nebula-drift 60s ease-in-out infinite;
+
+  canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+}
+
+@keyframes nebula-drift {
+  0%,
+  100% {
+    translate: 30px 0;
+  }
+
+  25% {
+    translate: 0 20px;
+  }
+
+  50% {
+    translate: -30px 0;
+  }
+
+  75% {
+    translate: 0 -20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #deepField {
+    animation: none;
+  }
 }
 
 /* CRT scanlines + vignette */
@@ -249,6 +299,7 @@ body::after {
 #touchControls {
   user-select: none;
   -webkit-user-select: none;
+  animation: hud-in 0.5s 0.15s ease-out backwards;
 
   &:not(:has(~ #startDialog[inert])) {
     display: none;
@@ -443,6 +494,8 @@ body::after {
   user-select: none;
   -webkit-user-select: none;
 
+  transition: --hull 0.4s ease-out;
+
   &:has([value='red']:checked) { --hull: #ff4d4d; }
   &:has([value='amber']:checked) { --hull: #ffbf00; }
   &:has([value='green']:checked) { --hull: #00cc00; }
@@ -455,36 +508,105 @@ body::after {
   }
 }
 
-/* Neon horizon grid rolling toward the player */
-.start-floor {
-  position: absolute !important;
-  z-index: -1;
-  right: -50%;
-  bottom: 0;
-  left: -50%;
-  height: 42vh;
-  background:
-    linear-gradient(to bottom, transparent 0 calc(100% - 2px), rgb(255 77 255 / 0.8) 0) 0 0 / 100% 48px,
-    linear-gradient(to right, transparent 0 calc(100% - 2px), rgb(255 77 255 / 0.8) 0) 50% 0 / 64px 100%,
-    linear-gradient(to bottom, transparent, rgb(120 20 160 / 0.45));
-  transform: perspective(240px) rotateX(62deg);
-  transform-origin: 50% 100%;
-  mask-image: linear-gradient(to bottom, transparent, black 55%);
-  animation: start-floor 1.6s linear infinite;
-  pointer-events: none;
-
-  &::before {
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(ellipse 50% 30% at 50% 0, rgb(255 120 220 / 0.6), transparent);
-    content: '';
+@keyframes hud-in {
+  from {
+    opacity: 0;
+    translate: 0 -0.5em;
   }
 }
 
-@keyframes start-floor {
-  to {
-    background-position: 0 48px, 50% 0, 0 0;
+/* Blast off: the title screen peels away in layers while the preview ship launches off the top */
+#startDialog.launching {
+  opacity: 0;
+  transition: opacity 0.25s 0.4s ease-in;
+  pointer-events: none;
+
+  .start-floor {
+    opacity: 0;
+    transition: opacity 0.6s ease-in;
   }
+
+  .start-kicker,
+  .subtitle,
+  .instructions,
+  .author,
+  .ship-card,
+  .hangar-controls,
+  #startButton {
+    opacity: 0;
+    transition:
+      opacity 0.35s ease-in,
+      translate 0.45s ease-in,
+      scale 0.45s ease-in;
+  }
+
+  .start-kicker,
+  .subtitle {
+    translate: 0 -0.8em;
+  }
+
+  .instructions,
+  .author,
+  .ship-card,
+  .hangar-controls {
+    translate: 0 1.2em;
+  }
+
+  #startButton {
+    scale: 0.85;
+    transition-duration: 0.25s;
+  }
+
+  .hangar {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    transition:
+      border-color 0.4s,
+      background 0.4s,
+      box-shadow 0.4s;
+  }
+
+  .logo {
+    opacity: 0;
+    scale: 1.25;
+    transition:
+      opacity 0.4s 0.15s ease-in,
+      scale 0.55s 0.1s cubic-bezier(0.5, 0, 0.9, 0.5);
+  }
+
+  .wheel-ship.is-center {
+    animation: launch 0.62s cubic-bezier(0.55, 0, 0.9, 0.35) forwards;
+  }
+
+  .wheel-ship:not(.is-center) {
+    opacity: 0 !important;
+    transition: opacity 0.25s;
+  }
+}
+
+@keyframes launch {
+  18% {
+    translate: 0 0.4em; /* crouch */
+    scale: 1.05 0.95;
+  }
+
+  to {
+    translate: 0 -110vh;
+    scale: 0.85 1.25; /* stretched by speed */
+  }
+}
+
+/* Neon horizon grid rolling toward the player, drawn in perspective on its own canvas (see drawStartFloor) */
+.start-floor {
+  position: absolute !important;
+  z-index: -1;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 11vh;
+  pointer-events: none;
 }
 
 .start-kicker {
@@ -603,11 +725,14 @@ body::after {
   }
 }
 
-/* Hangar bay: live rocket preview + paint + zero G */
+/* Hangar bay: ship select. Live preview + the ship's card (stats, trade-off, best) up top; hull, paint and
+   zero G below */
 .hangar {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr;
   align-items: center;
-  gap: 1.6em;
+  gap: 0.9em 4em; /* room for the wheel's ▲▼ */
+  text-align: left;
   padding: 0.9em 1.6em 0.9em 1.2em;
   border: 1px solid rgb(0 255 204 / 0.35);
   border-radius: 1.2em;
@@ -617,11 +742,57 @@ body::after {
     0 0 24px rgb(0 255 204 / 0.12);
 }
 
-.hangar-rocket {
-  width: 4.6em;
-  height: 8.8em; /* fixed: the canvas resizes its own backing store to this box */
-  overflow: visible;
-  animation: start-hover 2.4s ease-in-out infinite;
+/* Ship wheel: an endless drum of hulls (laid out from main.js). The stage is one ship's frame; neighbors sit
+   above and below it, tilted back in 3D, and the edges fade out. */
+.ship-wheel {
+  --stage-w: 4.6em;
+  --stage-h: 8.8em;
+
+  position: relative;
+  width: calc(var(--stage-w) + 1em);
+  height: calc(var(--stage-h) * 1.5);
+  border-radius: 0.8em;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  /* Keyboard focus lands on the hidden radio group: ring the whole wheel (on this frame, not the masked drum,
+     or the mask would clip the outline away) */
+  &:has(:focus-visible) {
+    outline: dashed 3px var(--cyan);
+    outline-offset: 4px;
+  }
+}
+
+.wheel-drum {
+  position: absolute;
+  inset: 0;
+  perspective: 520px;
+  mask-image: linear-gradient(to bottom, transparent, black 12%, black 88%, transparent);
+}
+
+.wheel-ship {
+  position: absolute;
+  top: calc(50% - var(--stage-h) * 0.4); /* the hull sits 40% down its stage: center it */
+  left: calc(50% - var(--stage-w) / 2);
+  width: var(--stage-w);
+  height: var(--stage-h);
+  will-change: transform, opacity;
+
+  canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  &.is-center {
+    animation: start-hover 2.4s ease-in-out infinite;
+  }
 }
 
 @keyframes start-hover {
@@ -632,6 +803,15 @@ body::after {
 
 .hangar-controls {
   display: grid;
+  grid-column: 1 / -1;
+  align-self: center;
+  justify-items: start;
+  gap: 1.6em;
+}
+
+/* A label with its control close below it */
+.hangar-group {
+  display: grid;
   justify-items: start;
   gap: 0.7em;
 }
@@ -641,61 +821,6 @@ body::after {
   font-size: 0.75em;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-}
-
-.hull-name {
-  margin-left: 0.4em;
-  color: var(--cream);
-  letter-spacing: 0.15em;
-}
-
-.hull-selector {
-  display: flex;
-  gap: 0.5em;
-}
-
-.hull-option {
-  display: block;
-  position: relative;
-  cursor: pointer;
-
-  input {
-    position: absolute;
-    width: 0;
-    height: 0;
-    opacity: 0;
-    appearance: none;
-  }
-
-  canvas {
-    display: block;
-    width: 2.4em;
-    height: 2.4em;
-    border-radius: 0.6em;
-    background: rgb(255 255 255 / 0.04);
-    box-shadow: 0 0 0 1px rgb(255 255 255 / 0.1);
-    transition:
-      transform 0.15s,
-      box-shadow 0.15s,
-      background 0.15s;
-  }
-
-  &:hover canvas {
-    transform: translateY(-2px);
-  }
-
-  :checked + canvas {
-    background: color-mix(in oklab, var(--hull), transparent 85%);
-    box-shadow:
-      0 0 0 2px var(--ink),
-      0 0 0 4px var(--hull),
-      0 0 14px 1px color-mix(in oklab, var(--hull), transparent 40%);
-  }
-
-  :focus-visible + canvas {
-    outline: dashed 3px var(--cyan);
-    outline-offset: 5px;
-  }
 }
 
 .color-selector {
@@ -719,11 +844,15 @@ body::after {
 
 .color-circle {
   display: block;
+  position: relative;
   width: 1.9em;
   height: 1.9em;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #fff 0 8%, var(--c) 30%, color-mix(in oklab, var(--c), var(--ink) 55%) 100%);
-  box-shadow: 0 0 0 2px rgb(255 255 255 / 0.12);
+  border-radius: 0.45em;
+  /* A flat neon paint chip: solid color, a dark inner rim, a thin lit top edge and a soft glow of its own */
+  background: linear-gradient(to bottom, color-mix(in oklab, var(--c), white 18%) 0 2px, var(--c) 2px);
+  box-shadow:
+    inset 0 0 0 2px rgb(7 2 15 / 0.45),
+    0 0 10px -3px var(--c);
   transition:
     transform 0.15s,
     box-shadow 0.15s;
@@ -733,8 +862,9 @@ body::after {
   }
 
   :checked + & {
-    transform: scale(1.15);
+    transform: translateY(-2px) scale(1.12);
     box-shadow:
+      inset 0 0 0 2px rgb(7 2 15 / 0.45),
       0 0 0 2px var(--ink),
       0 0 0 4px var(--c),
       0 0 16px 2px var(--c);
@@ -743,6 +873,29 @@ body::after {
   :focus-visible + & {
     outline: dashed 3px var(--cyan);
     outline-offset: 5px;
+  }
+}
+
+/* The picked swatch sends out a ring of its paint */
+.color-option :checked + .color-circle::after {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--c);
+  border-radius: 0.45em;
+  content: '';
+  animation: paint-ripple 0.55s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes paint-ripple {
+  from {
+    scale: 1;
+    opacity: 0.9;
+  }
+
+  to {
+    scale: 1.9;
+    opacity: 0;
   }
 }
 
@@ -804,6 +957,334 @@ body::after {
   }
 }
 
+/* Every ship's title and details sit stacked in one grid cell (only the picked one shows), so the card is
+   always sized for the biggest ship and never shifts when you switch */
+.ship-stack {
+  display: grid;
+
+  > * {
+    grid-area: 1 / 1;
+    visibility: hidden;
+    opacity: 0;
+    translate: 0 0.35em;
+    transition:
+      opacity 0.18s,
+      translate 0.18s,
+      visibility 0s 0.18s;
+  }
+
+  > .is-active {
+    visibility: visible;
+    opacity: 1;
+    translate: 0 0;
+    transition:
+      opacity 0.25s 0.06s,
+      translate 0.3s 0.06s cubic-bezier(0.2, 1.4, 0.4, 1);
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.ship-card {
+  display: grid;
+  gap: 1em; /* title, stats and details each get room */
+  min-width: 15em;
+}
+
+.ship-title {
+  color: var(--cream);
+  font-weight: 900;
+  font-size: 1.35em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ship-kind {
+  display: block;
+  margin-top: 0.45em;
+  color: var(--hull);
+  font-weight: 700;
+  font-size: 0.55em;
+  letter-spacing: 0.25em;
+}
+
+.ship-stats {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: start;
+  align-items: center;
+  gap: 0.65em 1.1em;
+  font-size: 0.72em;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.ship-pips {
+  display: flex;
+  gap: 0.25em;
+
+  i {
+    width: 1.5em;
+    height: 0.6em;
+    border-radius: 0.15em;
+    background: rgb(255 255 255 / 0.1);
+    transition:
+      background-color 0.2s calc(var(--i) * 40ms),
+      box-shadow 0.2s calc(var(--i) * 40ms),
+      scale 0.25s calc(var(--i) * 40ms) cubic-bezier(0.2, 1.8, 0.4, 1);
+  }
+
+  .on {
+    background: var(--hull);
+    box-shadow: 0 0 6px color-mix(in oklab, var(--hull), transparent 40%);
+    scale: 1 1.15;
+  }
+}
+
+.ship-perks {
+  display: grid;
+  gap: 0.5em;
+  margin: 0;
+  padding: 0;
+  font-size: 0.78em;
+  line-height: 1.35;
+  list-style: none;
+  letter-spacing: 0.04em;
+
+  /* Informational: quiet cream text; only the ▲▼ markers carry the green and red */
+  li {
+    color: rgb(255 241 220 / 0.72);
+    font-weight: 400;
+  }
+
+  .pro::before,
+  .con::before {
+    display: inline-block;
+    width: 1.3em;
+  }
+
+  .pro::before {
+    color: rgb(77 255 136 / 0.85);
+  }
+
+  .con::before {
+    color: rgb(255 122 107 / 0.85);
+  }
+
+  .pro::before {
+    content: '\25B2'; /* ▲ (escaped: immune to how the stylesheet's charset is guessed) */
+  }
+
+  .con::before {
+    content: '\25BC'; /* ▼ */
+  }
+}
+
+.ship-best {
+  margin-top: 0.9em;
+  color: rgb(255 241 220 / 0.55);
+  font-size: 0.68em;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+/* Key glyphs as SVG (one chunky arrow, rotated per direction, and a return arrow): font arrows render thin
+   and vary by typeface */
+.sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.key-arrow {
+  width: 0.95em;
+  height: 0.95em;
+  fill: currentColor;
+  vertical-align: -0.14em;
+
+  &[data-dir='right'] {
+    rotate: 90deg;
+  }
+
+  &[data-dir='down'] {
+    rotate: 180deg;
+  }
+
+  &[data-dir='left'] {
+    rotate: -90deg;
+  }
+}
+
+.arrow-keys {
+  display: inline-flex !important;
+  gap: 0.15em;
+  align-items: center;
+}
+
+/* Little keycaps showing the start screen's keys (←→ paint, ↵ go); hidden on touch screens */
+.hint-keys {
+  display: inline-flex;
+  gap: 0.25em;
+  margin-left: 0.6em;
+  vertical-align: middle;
+  letter-spacing: 0;
+
+  kbd {
+    display: inline-block;
+    min-width: 1.6em;
+    padding: 0.35em 0.4em;
+    border: 1px solid rgb(0 255 204 / 0.45);
+    border-bottom-width: 2px;
+    border-radius: 0.3em;
+    color: var(--cream);
+    font: inherit;
+    font-size: 0.85em;
+    line-height: 1.2;
+    text-align: center;
+    opacity: 0.8;
+  }
+
+  @media (hover: none) and (pointer: coarse) {
+    display: none;
+  }
+}
+
+/* Arrow buttons (the wheel's ▲▼, paint's ◀▶): click or tap steps once. The keyboard has its own keys, so
+   these stay out of the tab order. */
+.step-button {
+  display: inline-grid;
+  place-items: center;
+  width: 2.2em;
+  height: 1.95em;
+  padding: 0;
+  border: 1px solid rgb(0 255 204 / 0.45);
+  border-bottom-width: 2px;
+  border-radius: 0.4em;
+  background: rgb(7 2 15 / 0.7);
+  color: var(--cream);
+  font-size: 0.85em;
+  letter-spacing: 0;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    scale 0.1s;
+
+  &:hover {
+    border-color: var(--cyan);
+    background: rgb(0 255 204 / 0.15);
+  }
+
+  &:active {
+    scale: 0.92;
+  }
+}
+
+/* The wheel's pair, stacked beside it so they never cover the neighbor ships */
+.wheel-step {
+  z-index: 20;
+  position: absolute;
+  left: calc(100% + 0.9em);
+
+  &[data-step='-1'] {
+    bottom: calc(50% + 0.45em);
+  }
+
+  &[data-step='1'] {
+    top: calc(50% + 0.45em);
+  }
+}
+
+/* Paint's pair rides beside its label */
+.paint-steps {
+  display: inline-flex;
+  gap: 0.35em;
+  margin-left: 0.8em;
+  vertical-align: middle;
+  font-size: calc(1em / 0.75); /* undo the label's 0.75em so they match the wheel's pair exactly */
+}
+
+/* Wide screens: wheel, card and pickers in one row so the title screen stays short */
+@media (min-width: 900px) {
+  .hangar {
+    grid-template-columns: auto auto auto;
+  }
+
+  .hangar-controls {
+    grid-column: auto;
+    padding: 0.4em 0 0.4em 2em;
+    border-left: 1px solid rgb(0 255 204 / 0.18);
+  }
+}
+
+/* Narrow screens: the trade-offs span the panel under the wheel and stats (less wrapping, so less space held
+   for the longest ship), then a divider and the paint and mode groups, centered */
+@media (max-width: 899px) {
+  .hangar {
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      'wheel title'
+      'wheel stats'
+      'details details'
+      'controls controls';
+    gap: 0.6em 3.6em; /* room for the wheel's ▲▼ */
+  }
+
+  .ship-card {
+    display: contents;
+  }
+
+  .ship-wheel {
+    grid-area: wheel;
+  }
+
+  #shipTitles {
+    grid-area: title;
+    align-self: end;
+  }
+
+  .ship-stats {
+    grid-area: stats;
+    align-self: start;
+  }
+
+  #shipDetails {
+    grid-area: details;
+
+    > * {
+      align-self: center; /* the space held for the longest ship splits above and below, not one gap */
+    }
+  }
+
+  .hangar-controls {
+    grid-area: controls;
+    justify-items: center;
+    gap: 1.2em;
+    padding-top: 1.1em;
+    border-top: 1px solid rgb(0 255 204 / 0.18);
+  }
+
+  .hangar-group {
+    justify-items: center;
+  }
+}
+
+#startButton .hint-keys {
+  font-size: 0.45em;
+
+  kbd {
+    border-color: rgb(7 2 15 / 0.45);
+    color: rgb(7 2 15 / 0.75);
+  }
+}
+
 #startDialog .instructions {
   margin: 0;
   color: rgb(0 255 204 / 0.8);
@@ -818,7 +1299,7 @@ body::after {
   kbd {
     display: inline-block;
     margin: 0 0.2em;
-    padding: 0.2em 0.5em;
+    padding: 0.4em 0.55em;
     border: 1px solid rgb(0 255 204 / 0.5);
     border-bottom-width: 3px;
     border-radius: 0.35em;
@@ -860,14 +1341,15 @@ body::after {
     font-size: clamp(12px, 3.6vw, 15px);
   }
 
+
   .hangar {
-    gap: 1em;
+    gap: 0.6em 3.2em; /* room for the wheel's ▲▼ */
     padding: 0.8em 1em;
   }
 
-  .hangar-rocket {
-    width: 3.6em;
-    height: 6.9em;
+  .ship-wheel {
+    --stage-w: 3.6em;
+    --stage-h: 6.9em;
   }
 
   #startDialog .subtitle {
@@ -915,7 +1397,7 @@ body::after {
   flex-wrap: wrap;
   justify-content: center;
   gap: 6px;
-  width: min(92vw, 760px);
+  width: min(92vw, 1240px); /* wide enough for two rows on desktop */
   transform: translateX(-50%);
 }
 
