@@ -17,6 +17,8 @@
     <div id="score">Score: 0</div>
     <div id="accuracy">Accuracy: 0%</div>
     <div id="hits">Hits: 0</div>
+    <div id="lives" role="img" aria-label="3 lives"></div>
+    <div id="combo" hidden>Combo ×1</div>
     <div id="highScore">Best: 0</div>
     <div id="timer">0:00</div>
     <button id="soundToggle" aria-label="Toggle sound">
@@ -82,47 +84,74 @@
       </div>
     </div>
     <div id="gameOver">
-      Game Over<br />
+      Game Over
+      <div id="newBest" hidden>New Best!</div>
+      <div id="finalStats"></div>
       <button id="restartButton" class="game-button">Play Again</button>
     </div>
+    <div id="testDeck" hidden></div>
+    <div id="paused" hidden>
+      Paused
+      <div class="hint">Press P or tap to resume</div>
+    </div>
     <div id="startDialog">
-      <h1>Rocket Blaster</h1>
-      <div class="subtitle">Destroy asteroids and avoid black holes</div>
-      <div class="instructions">Use arrows to move & space to shoot<br /></div>
-      <div class="color-selector">
-        <label class="color-option">
-          <input type="radio" name="rocketColor" value="red" />
-          <span class="color-circle" style="background-color: #ff4d4d"></span>
-        </label>
-        <label class="color-option">
-          <input type="radio" name="rocketColor" value="amber" />
-          <span class="color-circle" style="background-color: #ffbf00"></span>
-        </label>
-        <label class="color-option">
-          <input type="radio" name="rocketColor" value="green" />
-          <span class="color-circle" style="background-color: #00cc00"></span>
-        </label>
-        <label class="color-option">
-          <input type="radio" name="rocketColor" value="blue" checked />
-          <span class="color-circle" style="background-color: #02b7ff"></span>
-        </label>
-        <label class="color-option">
-          <input type="radio" name="rocketColor" value="purple" />
-          <span class="color-circle" style="background-color: #9900cc"></span>
-        </label>
-        <label class="color-option">
-          <input type="radio" name="rocketColor" value="pink" />
-          <span class="color-circle" style="background-color: #ff66b2"></span>
-        </label>
-        <label class="color-option">
-          <input type="radio" name="rocketColor" value="gray" />
-          <span class="color-circle" style="background-color: #686868"></span>
-        </label>
+      <div class="start-floor" aria-hidden="true"></div>
+      <div class="start-kicker">&#9733; Player 1 &#9733;</div>
+      <h1 class="logo">
+        <span class="logo-rocket">Rocket</span>
+        <span class="logo-blaster">Blaster</span>
+      </h1>
+      <div class="subtitle"><span>Destroy asteroids</span> &middot; <span>Avoid black holes</span></div>
+      <div class="hangar">
+        <canvas class="hangar-rocket" id="hangarPreview" aria-hidden="true"></canvas>
+        <div class="hangar-controls">
+          <div class="hangar-label">Ship <span id="hullName" class="hull-name">Classic</span></div>
+          <div class="hull-selector" id="hullSelector" role="radiogroup" aria-label="Ship"></div>
+          <div class="hangar-label">Paint</div>
+          <div class="color-selector" role="radiogroup" aria-label="Rocket color">
+            <label class="color-option" style="--c: #ff4d4d">
+              <input type="radio" name="rocketColor" value="red" aria-label="Red" />
+              <span class="color-circle"></span>
+            </label>
+            <label class="color-option" style="--c: #ffbf00">
+              <input type="radio" name="rocketColor" value="amber" aria-label="Amber" />
+              <span class="color-circle"></span>
+            </label>
+            <label class="color-option" style="--c: #00cc00">
+              <input type="radio" name="rocketColor" value="green" aria-label="Green" />
+              <span class="color-circle"></span>
+            </label>
+            <label class="color-option" style="--c: #02b7ff">
+              <input type="radio" name="rocketColor" value="blue" checked aria-label="Blue" />
+              <span class="color-circle"></span>
+            </label>
+            <label class="color-option" style="--c: #9900cc">
+              <input type="radio" name="rocketColor" value="purple" aria-label="Purple" />
+              <span class="color-circle"></span>
+            </label>
+            <label class="color-option" style="--c: #ff66b2">
+              <input type="radio" name="rocketColor" value="pink" aria-label="Pink" />
+              <span class="color-circle"></span>
+            </label>
+            <label class="color-option" style="--c: #686868">
+              <input type="radio" name="rocketColor" value="gray" aria-label="Gray" />
+              <span class="color-circle"></span>
+            </label>
+          </div>
+          <label class="gravity-label"><input type="checkbox" id="zeroGravityToggle" /> Zero G</label>
+        </div>
       </div>
-      <label class="gravity-label"><input type="checkbox" id="zeroGravityToggle" /> Zero G</label>
-      <button id="startButton" class="game-button">Start Game</button>
+      <button id="startButton" class="game-button">Blast off</button>
+      <div class="instructions">
+        <span class="key-hint">
+          <span><kbd>WASD</kbd> or <kbd>&larr;&uarr;&darr;&rarr;</kbd> fly</span>
+          <span><kbd>Space</kbd> shoot</span>
+          <span><kbd>P</kbd> pause</span>
+        </span>
+        <span class="touch-hint">Left stick to fly &middot; Right button to shoot</span>
+      </div>
       <div class="author">
-        by <a href="https://x.com/cory_laviska" target="_blank">Cory LaViska</a> &middot;
+        by <a href="https://x.com/claviska" target="_blank">Cory LaViska</a> &middot;
         <a href="https://github.com/claviska/rocket-blaster/" target="_blank">open source</a>
       </div>
     </div>

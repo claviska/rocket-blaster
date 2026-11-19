@@ -2,7 +2,7 @@
 
 A shoot 'em up game in outer space. Blast asteroids, grab power ups, and avoid black holes!
 
-Built by [@cory_laviska](https://x.com/cory_laviska) using Grok 3 and a sprinkle of Claude.
+Built by [@claviska](https://x.com/claviska) using Grok 3 and a sprinkle of Claude.
 
 Have fun! 🚀
 
@@ -19,4 +19,4 @@ npm start
 ## Ideas
 
 - [ ] settings dialog to tweak speeds, sizes, etc.
-- [ ] add power up like shield but it lets you shoot a spread of 3-5 bullets instead of one until it runs out
+- [x] add power up like shield but it lets you shoot a spread of 3-5 bullets instead of one until it runs out
