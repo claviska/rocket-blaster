@@ -1276,12 +1276,17 @@ body::after {
   }
 }
 
-#startButton .hint-keys {
-  font-size: 0.45em;
+/* Enter hint: a bare return glyph in the button's own ink, cap-height, part of the label (no keycap) */
+#startButton .go-key {
+  width: 0.72em;
+  height: 0.72em;
+  margin-left: 0.45em;
+  fill: currentColor;
+  opacity: 0.55;
+  vertical-align: -0.02em;
 
-  kbd {
-    border-color: rgb(7 2 15 / 0.45);
-    color: rgb(7 2 15 / 0.75);
+  @media (hover: none) and (pointer: coarse) {
+    display: none;
   }
 }
 

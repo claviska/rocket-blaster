@@ -52,9 +52,13 @@ const WAVE_SIZE = [4, 1, 10]; // families: first wave, +per wave, max
 const WAVE_BREATHER = 1800; // ms of calm after a clear
 const WAVE_REINFORCE = 25000; // ms until the next wave arrives anyway
 const WAVE_STAGGER = [150, 450]; // ms between a wave's rocks
-const WAVE_CLEAR_POINTS = 250; // × the wave number
-const DIFFICULTY_SPEED_RAMP = 0.12; // new asteroids get 12% faster per minute survived...
-const DIFFICULTY_SPEED_MAX = 1.6; // ...up to this multiplier
+const WAVE_CLEAR_POINTS = 250; // × the wave number; ×2 for FAST, ×2 more for FLAWLESS
+const WAVE_PAR = 3000; // ms per rock family: clear the wave within par for FAST
+// New rocks (and boss shots) speed up with the waves you reach, plus a slow creep with time so stalling isn't
+// free: difficulty follows skill, not just the clock
+const DIFFICULTY_PER_WAVE = 0.045;
+const DIFFICULTY_PER_MINUTE = 0.03;
+const DIFFICULTY_SPEED_MAX = 1.6;
 
 const BULLET_SPEED = 15;
 const BULLET_LIFETIME = 2500;
@@ -180,6 +184,7 @@ const STAR_LAYERS = [
   { density: 50, size: [0.7, 1.4], brightness: [0.4, 0.75], parallax: 0.04, drift: 4 },
   { density: 16, size: [1.2, 2.2], brightness: [0.6, 1], parallax: 0.08, drift: 9 }
 ];
+const CRUISE_SPEED = 0.025; // px/ms the stars stream past (scaled by layer depth: ~9px/s far, ~31px/s near)
 const STAR_TINTS = ['#ffffff', '#ffffff', '#ffffff', '#b8ccff', '#9fe8ff']; // mostly white, some blue, a little cyan
 const SOUND_NAMES = [
   'asteroid-explode',
@@ -249,6 +254,7 @@ let particles = [];
 let pendingAsteroids = []; // clock times at which to spawn a new asteroid
 let wave = 0;
 let nextWave = Infinity;
+let waveStats = { at: 0, families: 0, shots: 0, hits: 0 }; // for FAST and FLAWLESS
 let score = 0;
 let displayScore = 0;
 let shotsFired = 0;
@@ -267,7 +273,7 @@ let enemyShots = [];
 let bossBag = []; // kinds still to meet before any repeat
 let bossCounts = new Map(); // kind → appearances this run
 let encounters = 0; // boss arrivals this run (a duo counts once)
-let nextBoss = Infinity;
+let bossesOff = false; // tests: no boss waves
 let duoAt = Infinity; // when the second boss of a duo arrives
 let cover = []; // rocks that block enemy fire this frame: the field plus any worn Hollowclaw shell
 let sporeSprite = null;
@@ -1620,8 +1626,7 @@ class EnemyShot {
   draw() {}
 }
 
-const BOSS_FIRST = [45000, 60000]; // ms into a run before the first boss
-const BOSS_GAP = [45000, 75000]; // ms after the last one leaves or dies before the next
+const BOSS_WAVE_EVERY = 3; // waves 3, 6, 9…: a boss arrives (with a few rocks for cover) instead of a full wave
 const DUO_SCORE = 25000; // from this score (or the DUO_ENCOUNTER-th boss) a second boss may join
 const DUO_ENCOUNTER = 4;
 const DUO_CHANCE = [0.3, 0.6]; // at DUO_SCORE, and the cap it rises to (+10% per 10k points)
@@ -5449,22 +5454,19 @@ function spawnBoss(kind) {
   playSound('black-hole-spawn', { rate: 0.45 }); // a low moan
 }
 
-// Director: one boss now and then; later in a run, sometimes a second one joins it
+// A boss wave's encounter: one boss; later in a run, sometimes a second one joins it a few seconds on
+function startBossEncounter() {
+  spawnBoss();
+  encounters++;
+  const duo = score >= DUO_SCORE || encounters >= DUO_ENCOUNTER;
+  const chance = clamp(DUO_CHANCE[0] + Math.max(0, score - DUO_SCORE) / 100000, DUO_CHANCE[0], DUO_CHANCE[1]);
+  if (duo && Math.random() < chance) duoAt = clock + DUO_DELAY;
+}
+
 function directBosses() {
-  if (!isPlaying()) return;
-  if (!bosses.length && clock >= nextBoss) {
-    spawnBoss();
-    encounters++;
-    nextBoss = Infinity;
-    const duo = score >= DUO_SCORE || encounters >= DUO_ENCOUNTER;
-    const chance = clamp(DUO_CHANCE[0] + Math.max(0, score - DUO_SCORE) / 100000, DUO_CHANCE[0], DUO_CHANCE[1]);
-    if (duo && Math.random() < chance) duoAt = clock + DUO_DELAY;
-  }
-  if (clock >= duoAt) {
-    duoAt = Infinity;
-    spawnBoss();
-  }
-  if (!bosses.length && nextBoss === Infinity && duoAt === Infinity) nextBoss = clock + rand(...BOSS_GAP);
+  if (!isPlaying() || clock < duoAt) return;
+  duoAt = Infinity;
+  spawnBoss();
 }
 
 // A bullet vs the bosses and their shots (after it's done with asteroids)
@@ -5554,7 +5556,8 @@ function drawBosses() {
 
 function difficultySpeed() {
   if (!gameStarted) return 1;
-  return Math.min(DIFFICULTY_SPEED_MAX, 1 + ((clock - gameStartTime) / 60000) * DIFFICULTY_SPEED_RAMP);
+  const minutes = (clock - gameStartTime) / 60000;
+  return Math.min(DIFFICULTY_SPEED_MAX, 1 + Math.max(0, wave - 1) * DIFFICULTY_PER_WAVE + minutes * DIFFICULTY_PER_MINUTE);
 }
 
 function scheduleAsteroid(delay = rand(ASTEROID_SPAWN_MIN, ASTEROID_SPAWN_MAX)) {
@@ -5575,26 +5578,57 @@ const liveFamilies = () => new Set([...asteroids, ...bosses.map(b => b.shell)].f
 // This wave's family count; halved while a boss is visiting (it brings its own trouble)
 const waveSize = () => (bosses.length ? Math.max(2, Math.ceil(scaled(WAVE_SIZE, wave) / 2)) : scaled(WAVE_SIZE, wave));
 
+const isBossWave = n => !bossesOff && n % BOSS_WAVE_EVERY === 0;
+
 function startWave() {
   wave++;
+  const bossWave = isBossWave(wave);
+  if (bossWave) startBossEncounter(); // first, so the rocks that come with it are the halved boss-wave share
   let delay = 0;
   for (let i = liveFamilies() + pendingAsteroids.length; i < waveSize(); i++) scheduleAsteroid((delay += rand(...WAVE_STAGGER)));
-  nextWave = clock + WAVE_REINFORCE;
-  pointTexts.push(new PointText(W / 2, H * 0.32, `WAVE ${wave}`, CREAM, 24));
+  // A boss wave holds the clock until the boss is gone; a rock wave gets the usual 25s
+  nextWave = bossWave ? Infinity : clock + WAVE_REINFORCE;
+  waveStats = { at: clock, families: Math.max(1, waveSize()), shots: shotsFired, hits: bulletHits };
+  if (bossWave) {
+    pointTexts.push(new PointText(W / 2, H * 0.32, `WAVE ${wave} · BOSS`, COMBO_COLOR, 28));
+    addShake(5);
+  } else {
+    pointTexts.push(new PointText(W / 2, H * 0.32, `WAVE ${wave}`, CREAM, 24));
+  }
+}
+
+// Field (and any boss) cleared: a bonus that doubles for a FAST clear and again for a FLAWLESS one (every shot
+// a hit), a free power-up for flawless, then a beat of calm before the next wave
+function clearWave() {
+  const fast = clock - waveStats.at <= waveStats.families * WAVE_PAR;
+  const shots = shotsFired - waveStats.shots;
+  const flawless = shots > 0 && bulletHits - waveStats.hits >= shots;
+  const multiplier = (fast ? 2 : 1) * (flawless ? 2 : 1);
+  const points = WAVE_CLEAR_POINTS * wave * multiplier;
+  score += points;
+  updateHighScore();
+  const y = H * 0.32;
+  pointTexts.push(new PointText(W / 2, y, 'WAVE CLEAR!', BULLET_COLOR, 26));
+  pointTexts.push(new PointText(W / 2, y + 34, `+${points}`, BULLET_COLOR, 20));
+  const tags = [fast && 'FAST ×2', flawless && 'FLAWLESS ×2'].filter(Boolean);
+  if (tags.length) pointTexts.push(new PointText(W / 2, y + 62, tags.join('  '), COMBO_COLOR, 16));
+  if (flawless) {
+    const p = new PowerUp(pick(Object.keys(POWER_UP_DURATION)));
+    Object.assign(p, { x: W / 2, y: H * 0.45, velX: rand(-0.4, 0.4), velY: rand(-0.4, 0.4), spawnTime: clock - p.fadeIn });
+    powerUps.push(p);
+  }
+  addParticle({ kind: 'ring', x: player.x, y: player.y, life: 40, size: Math.max(W, H) * 0.6, width: 4, color: BULLET_COLOR, drag: 1 });
+  playSound('power-up', { rate: multiplier > 1 ? 1 : 0.8 });
 }
 
 function directWaves() {
   if (!isPlaying()) return;
-  if (!liveFamilies() && !pendingAsteroids.length && nextWave - clock > WAVE_BREATHER) {
-    // Field cleared: a bonus, a beat of calm, then the next wave
-    const points = WAVE_CLEAR_POINTS * wave;
-    score += points;
-    updateHighScore();
-    pointTexts.push(new PointText(W / 2, H * 0.32, 'WAVE CLEAR!', BULLET_COLOR, 26));
-    pointTexts.push(new PointText(W / 2, H * 0.32 + 34, `+${points}`, BULLET_COLOR, 20));
-    addParticle({ kind: 'ring', x: player.x, y: player.y, life: 40, size: Math.max(W, H) * 0.6, width: 4, color: BULLET_COLOR, drag: 1 });
-    playSound('power-up', { rate: 0.8 });
+  const bossesDone = !bosses.length && duoAt === Infinity;
+  if (bossesDone && !liveFamilies() && !pendingAsteroids.length && nextWave - clock > WAVE_BREATHER) {
+    clearWave();
     nextWave = clock + WAVE_BREATHER;
+  } else if (bossesDone && nextWave === Infinity) {
+    nextWave = clock + WAVE_REINFORCE; // the boss is gone but rocks remain: the usual clock resumes
   }
   if (clock >= nextWave) startWave();
 }
@@ -5818,6 +5852,7 @@ function resetGame(freshAsteroids = true) {
   pendingAsteroids = [];
   wave = 1; // the starting rocks (or the ones already drifting behind the title screen)
   nextWave = clock + WAVE_REINFORCE;
+  waveStats = { at: clock, families: STARTING_ASTEROIDS, shots: 0, hits: 0 };
   gameStartTime = clock; // before spawning: asteroid speed scales with time since start
   if (freshAsteroids) asteroids = Array.from({ length: STARTING_ASTEROIDS }, () => new Asteroid());
   score = displayScore = shotsFired = bulletHits = hits = combo = maxCombo = 0;
@@ -5833,7 +5868,6 @@ function resetGame(freshAsteroids = true) {
   bossBag = [];
   bossCounts = new Map();
   encounters = 0;
-  nextBoss = clock + rand(...BOSS_FIRST);
   duoAt = Infinity;
   cover = asteroids;
   slowMo = flash = hitstop = 0;
@@ -6421,7 +6455,10 @@ function drawStars() {
   const seconds = REDUCED_MOTION ? 0 : clock / 1000;
   const now = performance.now();
   const warp = warpLevel();
-  warpScroll += warp * Math.min(50, now - warpLast) * 1.6;
+  // Always cruising: the field streams past at a gentle pace (the near layer fastest), and hyperspace is just
+  // that pace turned way up, so the launch eases back into cruise instead of stopping dead
+  const dt = Math.min(50, now - (warpLast || now));
+  warpScroll += (REDUCED_MOTION ? 0 : CRUISE_SPEED + warp * 1.6) * dt;
   warpLast = now;
   let fill = '';
   for (const star of stars) {
@@ -7482,7 +7519,7 @@ function buildShipCard() {
   for (const [key, s] of Object.entries(SHIPS)) {
     shipTitles.insertAdjacentHTML('beforeend', `<div class="ship-title" data-hull="${key}">${s.label}<span class="ship-kind">${s.kind}</span></div>`);
     const perks = [...s.pros.map(t => `<li class="pro">${t}</li>`), ...s.cons.map(t => `<li class="con">${t}</li>`)].join('');
-    const best = bests[key] ? `Best in this ship: ${bests[key].toLocaleString()}` : 'No runs in this ship yet';
+    const best = bests[key] ? `Ship best: ${bests[key].toLocaleString()}` : 'No runs yet';
     shipDetails.insertAdjacentHTML('beforeend', `<div data-hull="${key}"><ul class="ship-perks">${perks}</ul><div class="ship-best">${best}</div></div>`);
   }
   shipStats.innerHTML = Object.keys(shipPips(SHIP_BASE))
