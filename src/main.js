@@ -54,6 +54,7 @@ const WAVE_REINFORCE = 25000; // ms until the next wave arrives anyway
 const WAVE_STAGGER = [150, 450]; // ms between a wave's rocks
 const WAVE_CLEAR_POINTS = 250; // × the wave number; ×2 for FAST, ×2 more for FLAWLESS
 const WAVE_PAR = 3000; // ms per rock family: clear the wave within par for FAST
+const WAVE_WARP = [1600, 0.85]; // wave-clear hyperspace pulse: ms, peak streak (fits inside WAVE_BREATHER)
 // New rocks (and boss shots) speed up with the waves you reach, plus a slow creep with time so stalling isn't
 // free: difficulty follows skill, not just the clock
 const DIFFICULTY_PER_WAVE = 0.045;
@@ -255,6 +256,7 @@ let pendingAsteroids = []; // clock times at which to spawn a new asteroid
 let wave = 0;
 let nextWave = Infinity;
 let waveStats = { at: 0, families: 0, shots: 0, hits: 0 }; // for FAST and FLAWLESS
+let waveWarpAt = -Infinity; // when the last wave-clear warp pulse began
 let score = 0;
 let displayScore = 0;
 let shotsFired = 0;
@@ -5619,6 +5621,8 @@ function clearWave() {
   }
   addParticle({ kind: 'ring', x: player.x, y: player.y, life: 40, size: Math.max(W, H) * 0.6, width: 4, color: BULLET_COLOR, drag: 1 });
   playSound('power-up', { rate: multiplier > 1 ? 1 : 0.8 });
+  waveWarpAt = clock; // a quick jump to hyperspace and back; lands as the next wave's nebula fades in
+  flash = Math.max(flash, 0.15);
 }
 
 function directWaves() {
@@ -5959,6 +5963,8 @@ function warpLevel() {
   if (REDUCED_MOTION) return 0;
   if (launchAt && !gameStarted) return smooth(((performance.now() - launchAt) / LAUNCH_TIME - 0.15) / 0.85);
   if (player.arriveUntil) return 1 - smooth((1 - (player.arriveUntil - clock) / ARRIVAL_TIME) / 0.75);
+  const t = (clock - waveWarpAt) / WAVE_WARP[0];
+  if (t < 1) return WAVE_WARP[1] * smooth(t / 0.25) * (1 - smooth((t - 0.35) / 0.65)); // snap in, long ease out
   return 0;
 }
 
