@@ -5649,9 +5649,6 @@ function addCombo() {
 }
 
 function resetCombo() {
-  if (comboMultiplier() > 1 && isPlaying()) {
-    pointTexts.push(new PointText(player.x, player.y - 36, 'COMBO LOST', '#8a8aa0', 13));
-  }
   combo = 0;
 }
 

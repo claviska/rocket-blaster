@@ -1375,10 +1375,43 @@ body::after {
   }
 }
 
-/* Short screens (small phones, landscape): drop the extras */
-@media (max-height: 520px) {
+/* Short screens (phones with browser chrome, landscape): drop the extras so it all fits without scrolling */
+@media (max-height: 760px) {
   .start-kicker,
-  #startDialog .author {
+  #startDialog .author,
+  #startDialog .subtitle {
+    display: none;
+  }
+}
+
+@media (max-height: 660px) {
+  #startDialog .instructions {
+    display: none;
+  }
+}
+
+@media (max-height: 620px) {
+  .logo {
+    font-size: min(16vw, 9svh);
+  }
+
+  .ship-wheel {
+    --stage-w: 3.2em;
+    --stage-h: 6em;
+  }
+
+  .hangar-controls {
+    gap: 0.8em;
+    padding-top: 0.8em;
+  }
+}
+
+@media (max-height: 580px) {
+  .logo {
+    font-size: min(14vw, 7.5svh);
+  }
+
+  .hangar-group:has(.gravity-label) .hangar-label {
     display: none;
   }
 }
