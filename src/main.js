@@ -5490,7 +5490,7 @@ function shootBosses(b) {
   for (const boss of bosses) {
     if (!boss.vulnerable || b.struck?.has(boss) || !boss.hitBy(b)) continue;
     counted();
-    boss.hit(b.lance ? 2 : 1, { x: b.x, y: b.y, trick: b.trick, bullet: b });
+    boss.hit((b.lance ? 2 : 1) * ship.damage, { x: b.x, y: b.y, trick: b.trick, bullet: b });
     if (!b.lance) return (b.hit = true);
     b.struck.add(boss);
   }
@@ -5732,7 +5732,9 @@ function fire() {
   }
   playSound('shoot', hasPowerUp('lance') ? { rate: 0.7 } : { volume: 0.8 });
   shotsFired++;
-  player.lastShotTime = clock;
+  // Carry the overshoot while fire is held so the rate is 1000/cooldown, not rounded up to whole frames
+  const late = clock - player.lastShotTime - ship.cooldown;
+  player.lastShotTime = clock - (late > 0 && late < TARGET_DELTA * 2 ? late : 0);
   player.shootTimer = 10;
 
   // Muzzle flash
@@ -7350,18 +7352,19 @@ function paintDreadnought(g, s, color) {
   );
 }
 
-// Each hull trades one strength for one weakness against Classic (SHIP_BASE), within about ±25%, so the pick
-// is a play style, never a power ladder. Muzzles are where shots leave, in hull units; with two, shots
-// alternate between them (one bullet per shot either way).
+// Each hull trades one strength for one weakness against Classic (SHIP_BASE). Gaps are ~30-75% so the pick
+// feels like a play style (smaller gaps don't read in play), never a power ladder. Muzzles are where shots
+// leave, in hull units; with two, shots alternate between them (one bullet per shot either way).
 const SHIP_BASE = {
   speed: 4, // top speed, px/frame
-  accel: 0.2, // thrust per frame
+  accel: 0.2, // thrust responsiveness (lerp rate toward top speed; a true force in zero G)
   drift: 0.98, // velocity kept per frame when coasting (higher = slides longer)
   turn: 0.08, // rad/frame
   cooldown: 200, // ms between shots
   bulletSpeed: 15, // faster flies straighter: black holes bend it less
   gravity: 1, // black hole pull on the hull
-  powerUps: 1 // power-up duration multiplier
+  powerUps: 1, // power-up duration multiplier
+  damage: 1 // boss damage per hit (asteroids die to any hit)
 };
 const SHIPS = {
   classic: {
@@ -7378,45 +7381,45 @@ const SHIPS = {
     kind: 'Racer',
     paint: paintKestrel,
     muzzles: [[0, -18.5]],
-    stats: { speed: 4.8, drift: 0.99 },
-    pros: ['Top speed +20%'],
-    cons: ['Drifts: slow to stop']
+    stats: { speed: 5.6, accel: 0.24, drift: 0.99 },
+    pros: ['Top speed +40%, quick off the line'],
+    cons: ['Drifts: coasts twice as far']
   },
   swift: {
     label: 'Swift',
     kind: 'Sport flyer',
     paint: paintSwift,
     muzzles: [[0, -18.5]],
-    stats: { turn: 0.1, drift: 0.96, speed: 3.6 },
-    pros: ['Turns 25% faster, stops on a dime'],
-    cons: ['Top speed −10%']
+    stats: { turn: 0.12, drift: 0.94, speed: 3.4, accel: 0.28 },
+    pros: ['Turns 50% faster, snappy thrust', 'Stops on a dime'],
+    cons: ['Top speed −15%']
   },
   pathfinder: {
     label: 'Pathfinder',
     kind: 'Explorer',
     paint: paintPathfinder,
     muzzles: [[0, -18.5]],
-    stats: { powerUps: 1.3, cooldown: 230 },
-    pros: ['Power-ups last 30% longer'],
-    cons: ['Fires 15% slower']
+    stats: { powerUps: 1.5, cooldown: 250 },
+    pros: ['Power-ups last 50% longer'],
+    cons: ['Fires 20% slower']
   },
   reaver: {
     label: 'Reaver',
     kind: 'Strike fighter',
     paint: paintReaver,
     muzzles: [[-4.9, -11.6], [4.9, -11.6]],
-    stats: { cooldown: 160, turn: 0.064 },
-    pros: ['Fires 25% faster (twin cannons)'],
-    cons: ['Turns 20% slower']
+    stats: { cooldown: 115, bulletSpeed: 13, turn: 0.06 },
+    pros: ['Bullet hose: fires 75% faster (twin cannons)'],
+    cons: ['Turns 25% slower', 'Light rounds fly 13% slower']
   },
   dreadnought: {
     label: 'Dreadnought',
     kind: 'Siege tower',
     paint: paintDreadnought,
     muzzles: [[0, -18.5]],
-    stats: { bulletSpeed: 17.5, cooldown: 220, gravity: 0.35, speed: 3.4, accel: 0.17 },
-    pros: ['Railgun: shots fly 17% faster', 'Black holes barely pull it'],
-    cons: ['Slow: speed and thrust −15%', 'Railgun fires 10% slower, bends less']
+    stats: { bulletSpeed: 24, cooldown: 340, damage: 2, gravity: 0.25, speed: 2.9, accel: 0.12, drift: 0.985 },
+    pros: ['Railgun: shots fly 60% faster, hit bosses twice as hard', 'Black holes barely pull it'],
+    cons: ['Heavy: top speed −28%, sluggish thrust', 'Railgun fires 40% slower, barely bends']
   }
 };
 let ship = SHIP_BASE; // the flown hull's stats
@@ -7433,7 +7436,7 @@ function shipPips(stats) {
   return {
     Speed: pips((stats.speed / SHIP_BASE.speed - 1) * 10 + (stats.accel / SHIP_BASE.accel - 1) * 2),
     Handling: pips((stats.turn / SHIP_BASE.turn - 1) * 8 - (stats.drift - SHIP_BASE.drift) * 100),
-    Firepower: pips((SHIP_BASE.cooldown / stats.cooldown - 1) * 8 + (stats.bulletSpeed / SHIP_BASE.bulletSpeed - 1) * 4)
+    Firepower: pips(((SHIP_BASE.cooldown / stats.cooldown) * stats.damage - 1) * 5 + (stats.bulletSpeed / SHIP_BASE.bulletSpeed - 1) * 2)
   };
 }
 
@@ -7903,13 +7906,17 @@ soundToggle.addEventListener('click', e => {
   soundToggle.blur();
 });
 
-zeroGravityToggle.addEventListener('change', () => localStorage.setItem('zeroGravity', zeroGravityToggle.checked));
+zeroGravityToggle.addEventListener('change', () => {
+  localStorage.setItem('zeroGravity', zeroGravityToggle.checked);
+  playSound('click', { rate: zeroGravityToggle.checked ? 1.3 : 0.9, volume: 0.45, vary: 0 }); // up for on, down for off
+});
 
 document.querySelectorAll('input[name="rocketColor"]').forEach(input => {
   input.addEventListener('change', () => {
     rocketColor = ROCKET_COLORS[input.value];
     rocketSprite = null;
     localStorage.setItem('rocketColor', input.value);
+    playSound('click', { rate: 2, volume: 0.35 }); // a touch higher than the hull wheel's tick
     // The centered ship gets the paint wipe; the rest of the drum repaints at once
     for (const item of wheel.items) {
       const key = hullKeys[item.dataset.index];
