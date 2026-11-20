@@ -480,14 +480,14 @@ body::after {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: clamp(8px, 2.2vh, 22px);
+  justify-content: safe center;
+  gap: clamp(8px, 2.2svh, 22px);
   padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
-  overflow: hidden;
+  overflow: hidden auto;
   background: radial-gradient(ellipse 60% 55% at 50% 45%, rgb(7 2 15 / 0.6), transparent 75%);
   color: var(--cyan);
   font-weight: 700;
-  font-size: clamp(12px, min(2vw, 2.1vh), 17px);
+  font-size: clamp(12px, min(2vw, 2.1svh), 17px);
   line-height: 1.4;
   font-family: 'Orbitron', sans-serif;
   text-align: center;
@@ -605,7 +605,7 @@ body::after {
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 11vh;
+  height: 11svh;
   pointer-events: none;
 }
 
@@ -631,7 +631,7 @@ body::after {
   align-items: center;
   margin: 0;
   font-weight: 900;
-  font-size: min(15vw, 13vh, 132px);
+  font-size: min(15vw, 13svh, 132px);
   line-height: 0.92;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -1362,7 +1362,7 @@ body::after {
   }
 
   .logo {
-    font-size: min(16vw, 12vh);
+    font-size: min(16vw, 12svh);
   }
 
   .color-selector {
