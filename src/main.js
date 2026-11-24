@@ -230,6 +230,7 @@ const directionalControl = $('directionalControl');
 const joystick = $('joystick');
 const shootButton = $('shootButton');
 const restartButton = $('restartButton');
+const homeButton = $('homeButton');
 
 let rocketColor = ROCKET_COLORS.blue;
 let rocketHull = 'classic';
@@ -645,6 +646,11 @@ restartButton.addEventListener('click', e => {
   e.preventDefault();
   // Guard against a held Space/Enter from the final moments of play instantly restarting
   if (gameOverShown && performance.now() - gameOverShownAt > 400) resetGame();
+});
+
+homeButton.addEventListener('click', e => {
+  e.preventDefault();
+  if (gameOverShown && performance.now() - gameOverShownAt > 400) goHome();
 });
 
 // Touch controls
@@ -5968,6 +5974,39 @@ function warpLevel() {
   return 0;
 }
 
+// Home: from the game-over screen back to the title screen, to pick another ship, paint or mode before the
+// next run. Blast off works from there exactly as it does on a fresh load.
+function goHome() {
+  gameStarted = false;
+  launchAt = 0;
+  gameOverShown = false;
+  gameOverDisplay.style.display = 'none';
+  testDeck.hidden = true;
+  bullets = [];
+  powerUps = [];
+  blackHoles = [];
+  pointTexts = [];
+  particles = [];
+  pendingAsteroids = [];
+  bosses = [];
+  enemyShots = [];
+  asteroids = Array.from({ length: STARTING_ASTEROIDS }, () => new Asteroid());
+  cover = asteroids;
+  waveWarpAt = -Infinity;
+  slowMo = flash = hitstop = shake = 0;
+  renderShipBests(); // the run that just ended may have set one
+  startDialog.classList.remove('launching');
+  startDialog.classList.add('returning');
+  startDialog.style.display = '';
+  startDialog.inert = false;
+  startDialog.scrollTop = 0;
+  paintWheel(); // the window may have been resized while the wheel was hidden
+  floorLast = 0;
+  requestAnimationFrame(drawStartFloor);
+  $('startButton').focus({ focusVisible: false });
+  playSound('click');
+}
+
 function showGameOver() {
   saveShipBests();
   gameOverShown = true;
@@ -7520,14 +7559,20 @@ function wipePaint(canvas, hull) {
 
 // The ship card: every hull's title and details are built once and stacked (see .ship-stack), and the pips
 // are one shared set that fills and drains in place, so switching ships never reflows the screen
+function renderShipBests() {
+  for (const el of shipDetails.children) {
+    const best = shipBests[el.dataset.hull];
+    el.querySelector('.ship-best').textContent = best ? `Ship best: ${best.toLocaleString()}` : 'No runs yet';
+  }
+}
+
 function buildShipCard() {
-  const bests = shipBests;
   for (const [key, s] of Object.entries(SHIPS)) {
     shipTitles.insertAdjacentHTML('beforeend', `<div class="ship-title" data-hull="${key}">${s.label}<span class="ship-kind">${s.kind}</span></div>`);
     const perks = [...s.pros.map(t => `<li class="pro">${t}</li>`), ...s.cons.map(t => `<li class="con">${t}</li>`)].join('');
-    const best = bests[key] ? `Ship best: ${bests[key].toLocaleString()}` : 'No runs yet';
-    shipDetails.insertAdjacentHTML('beforeend', `<div data-hull="${key}"><ul class="ship-perks">${perks}</ul><div class="ship-best">${best}</div></div>`);
+    shipDetails.insertAdjacentHTML('beforeend', `<div data-hull="${key}"><ul class="ship-perks">${perks}</ul><div class="ship-best"></div></div>`);
   }
+  renderShipBests();
   shipStats.innerHTML = Object.keys(shipPips(SHIP_BASE))
     .map(name => `<span>${name}</span><span class="ship-pips" data-stat="${name}">${[0, 1, 2, 3, 4].map(i => `<i style="--i: ${i}"></i>`).join('')}</span>`)
     .join('');

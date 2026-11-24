@@ -331,6 +331,31 @@ body::after {
   }
 }
 
+/* The second choice beside a main button: same shape, dimmer, and it doesn't pulse */
+.game-button-quiet {
+  border-color: rgb(0 255 204 / 0.55);
+  box-shadow: none;
+  animation: none;
+}
+
+.game-over-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 16px;
+}
+
+/* Back from the game-over screen (see goHome) */
+#startDialog.returning {
+  animation: home-in 0.35s ease-out;
+}
+
+@keyframes home-in {
+  from {
+    opacity: 0;
+  }
+}
+
 @keyframes pulse {
   0% {
     transform: scale(1);
